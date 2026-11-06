@@ -1,0 +1,165 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design system — Jastip Anggun Jaya
+ * Palet brand: putih bersih, merah tegas, aksen emas (dari logo).
+ * Semua warna memakai oklch.
+ */
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-deep: var(--primary-deep);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
+  --color-gold-soft: var(--gold-soft);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.995 0.003 85);
+  --foreground: oklch(0.23 0.02 25);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.23 0.02 25);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.23 0.02 25);
+  --primary: oklch(0.565 0.205 27.5);
+  --primary-foreground: oklch(0.995 0.003 85);
+  --primary-deep: oklch(0.45 0.19 27);
+  --secondary: oklch(0.955 0.02 30);
+  --secondary-foreground: oklch(0.45 0.19 27);
+  --muted: oklch(0.955 0.008 80);
+  --muted-foreground: oklch(0.52 0.02 40);
+  --accent: oklch(0.955 0.045 88);
+  --accent-foreground: oklch(0.42 0.09 70);
+  --gold: oklch(0.8 0.125 85);
+  --gold-deep: oklch(0.63 0.115 75);
+  --gold-soft: oklch(0.94 0.045 88);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(0.92 0.012 70);
+  --input: oklch(0.92 0.012 70);
+  --ring: oklch(0.63 0.115 75);
+  --shadow-elegant: 0 18px 40px -18px oklch(0.45 0.19 27 / 0.28);
+  --shadow-gold: 0 14px 34px -14px oklch(0.63 0.115 75 / 0.4);
+}
+
+.dark {
+  --background: oklch(0.16 0.015 25);
+  --foreground: oklch(0.97 0.005 85);
+  --card: oklch(0.21 0.02 25);
+  --card-foreground: oklch(0.97 0.005 85);
+  --popover: oklch(0.21 0.02 25);
+  --popover-foreground: oklch(0.97 0.005 85);
+  --primary: oklch(0.63 0.2 27);
+  --primary-foreground: oklch(0.98 0.005 85);
+  --primary-deep: oklch(0.4 0.16 27);
+  --secondary: oklch(0.27 0.03 27);
+  --secondary-foreground: oklch(0.95 0.01 85);
+  --muted: oklch(0.26 0.015 30);
+  --muted-foreground: oklch(0.72 0.02 60);
+  --accent: oklch(0.3 0.04 60);
+  --accent-foreground: oklch(0.9 0.06 88);
+  --gold: oklch(0.82 0.12 85);
+  --gold-deep: oklch(0.7 0.11 78);
+  --gold-soft: oklch(0.3 0.04 70);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.7 0.11 78);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Aksen emas bergradasi untuk teks dan garis */
+@utility text-gradient-gold {
+  background-image: linear-gradient(
+    100deg,
+    var(--gold-deep) 0%,
+    var(--gold) 55%,
+    var(--gold-deep) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+@utility bg-gradient-gold {
+  background-image: linear-gradient(
+    100deg,
+    var(--gold-deep) 0%,
+    var(--gold) 60%,
+    var(--gold-deep) 100%
+  );
+}
+
+@utility bg-gradient-red {
+  background-image: linear-gradient(
+    135deg,
+    var(--primary-deep) 0%,
+    var(--primary) 70%,
+    oklch(0.63 0.21 32) 100%
+  );
+}
+
+@utility shadow-elegant {
+  box-shadow: var(--shadow-elegant);
+}
+
+@utility shadow-gold {
+  box-shadow: var(--shadow-gold);
+}
+
+@utility gold-rule {
+  height: 3px;
+  border-radius: 999px;
+  background-image: linear-gradient(
+    90deg,
+    var(--gold) 0%,
+    var(--gold-deep) 100%
+  );
+}
