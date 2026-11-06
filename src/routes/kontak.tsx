@@ -44,7 +44,7 @@ export function KontakPageView({ previewData }: { previewData?: AppCMSData }) {
       "Data paket dan status pengiriman saat ini dikelola langsung oleh admin dan diperbarui berkala melalui Dashboard, sehingga hasil pelacakan di website selalu sesuai catatan resmi.",
     infoBox2Title: "Sudah punya nomor resi?",
     infoBox2Text:
-      "Cek status dan ongkir paket Anda sendiri — cukup nama dan nomor resi, tanpa perlu menghubungi admin.",
+      "Cek status dan detail paket Anda sendiri — cukup nomor resi, tanpa perlu menghubungi admin.",
     infoBox2ButtonText: "Lacak Paket Sekarang",
   };
 

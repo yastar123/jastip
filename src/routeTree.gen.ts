@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as KontakRouteImport } from './routes/kontak'
 import { Route as LacakRouteImport } from './routes/lacak'
 import { Route as LayananRouteImport } from './routes/layanan'
@@ -17,6 +18,11 @@ import { Route as LayananRouteImport } from './routes/layanan'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KontakRoute = KontakRouteImport.update({
@@ -37,12 +43,14 @@ const LayananRoute = LayananRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/kontak': typeof KontakRoute
   '/lacak': typeof LacakRoute
   '/layanan': typeof LayananRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/kontak': typeof KontakRoute
   '/lacak': typeof LacakRoute
   '/layanan': typeof LayananRoute
@@ -50,20 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
   '/kontak': typeof KontakRoute
   '/lacak': typeof LacakRoute
   '/layanan': typeof LayananRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/kontak' | '/lacak' | '/layanan'
+  fullPaths: '/' | '/admin' | '/kontak' | '/lacak' | '/layanan'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/kontak' | '/lacak' | '/layanan'
-  id: '__root__' | '/' | '/kontak' | '/lacak' | '/layanan'
+  to: '/' | '/admin' | '/kontak' | '/lacak' | '/layanan'
+  id: '__root__' | '/' | '/admin' | '/kontak' | '/lacak' | '/layanan'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
   KontakRoute: typeof KontakRoute
   LacakRoute: typeof LacakRoute
   LayananRoute: typeof LayananRoute
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kontak': {
@@ -104,6 +121,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
   KontakRoute: KontakRoute,
   LacakRoute: LacakRoute,
   LayananRoute: LayananRoute,

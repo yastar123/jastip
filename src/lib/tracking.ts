@@ -19,13 +19,15 @@ export type Shipment = {
   timeline: TrackingEvent[];
 };
 
-export const DEMO_SHIPMENTS: Shipment[] = [];
-
-export function findShipment(resi: string, name: string): Shipment | null {
-  const r = resi.trim().toUpperCase();
-  const n = name.trim().toLowerCase();
-  if (!r || !n) return null;
-  return (
-    DEMO_SHIPMENTS.find((s) => s.resi.toUpperCase() === r && s.name.toLowerCase() === n) ?? null
-  );
-}
+export type PublicTrackingResult = {
+  resi: string;
+  packageNumber: string | null;
+  packageDate: string | null;
+  serviceType: string | null;
+  route: string | null;
+  realWeight: string | null;
+  volumeWeight: string | null;
+  billableWeight: string | null;
+  additionalFeeDescription: string | null;
+  status: string;
+};

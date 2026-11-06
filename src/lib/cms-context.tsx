@@ -2,8 +2,15 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { type AppCMSData } from "./cms-types";
 import { DEFAULT_CMS_DATA } from "./cms-defaults";
 import { type Shipment } from "./tracking";
+import { useAuth } from "./auth-context";
 
 const STORAGE_KEY = "jastip_anggun_cms_v1";
+
+function getAuthHeaders(): Record<string, string> {
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("jastip_anggun_auth_token") : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 interface DatabaseStatus {
   engine: string;
@@ -34,6 +41,7 @@ interface CMSContextType {
 const CMSContext = createContext<CMSContextType | null>(null);
 
 export function CMSProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [data, setData] = useState<AppCMSData>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -71,7 +79,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
         })
         .catch(() => {});
 
-      const res = await fetch("/api/cms");
+      const res = await fetch("/api/cms", { headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
         if (json?.data) {
@@ -93,7 +101,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshFromServer();
-  }, [refreshFromServer]);
+  }, [refreshFromServer, user]);
 
   const updateDraft = useCallback((updater: (prev: AppCMSData) => AppCMSData) => {
     setDraftData((prev) => updater(prev));
@@ -106,7 +114,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch("/api/cms", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(draftData),
       });
 
@@ -143,7 +151,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
   const resetToDefaults = useCallback(async (): Promise<boolean> => {
     setIsSaving(true);
     try {
-      const res = await fetch("/api/cms/reset", { method: "POST" });
+      const res = await fetch("/api/cms/reset", { method: "POST", headers: getAuthHeaders() });
       if (res.ok) {
         const json = await res.json();
         const resetData = json?.data || DEFAULT_CMS_DATA;
@@ -194,7 +202,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch("/api/shipments", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify(shipment),
         });
         if (res.ok) {
@@ -227,6 +235,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
       try {
         await fetch(`/api/shipments/${encodeURIComponent(resi)}`, {
           method: "DELETE",
+          headers: getAuthHeaders(),
         });
       } catch (err) {
         console.warn("Delete shipment API error:", err);

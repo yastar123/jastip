@@ -1,12 +1,12 @@
 import { type AppCMSData } from "./cms-types";
 import { SERVICES } from "./services";
-import { DEMO_SHIPMENTS } from "./tracking";
-import { SITE } from "./site";
+import { SITE, SITE_LOGO_URL } from "./site";
 
 export const DEFAULT_CMS_DATA: AppCMSData = {
   site: {
     name: SITE.name,
     tagline: SITE.tagline,
+    logoUrl: SITE_LOGO_URL,
     cities: SITE.cities,
     address: SITE.address,
     whatsapp: SITE.whatsapp,
@@ -61,7 +61,7 @@ export const DEFAULT_CMS_DATA: AppCMSData = {
       {
         iconName: "ScanBarcode",
         title: "Bisa Dilacak",
-        text: "Cek status paket kapan saja cukup dengan nama dan nomor resi — tanpa perlu telepon.",
+        text: "Cek status paket kapan saja cukup dengan nomor resi — tanpa perlu telepon.",
       },
       {
         iconName: "Headset",
@@ -71,7 +71,7 @@ export const DEFAULT_CMS_DATA: AppCMSData = {
     ],
     cta: {
       title: "Sudah titip paket? Lacak sekarang",
-      text: "Cukup masukkan nama dan nomor resi — status dan ongkir paket Anda langsung tampil.",
+      text: "Cukup masukkan nomor resi — status dan detail paket Anda langsung tampil.",
       buttonText: "Lacak Paket Sekarang",
     },
     citiesReach: ["Jakarta", "Surabaya", "Makassar"],
@@ -90,17 +90,16 @@ export const DEFAULT_CMS_DATA: AppCMSData = {
     headerBadge: "Lacak Paket",
     headerTitle: "Cek posisi paket Anda di sini",
     headerDescription:
-      "Masukkan nama dan nomor resi yang Anda terima saat titip paket. Pengecekan hanya bisa dilakukan dengan nama dan no resi — nomor HP tidak dapat digunakan.",
+      "Masukkan nomor resi untuk melihat status dan detail paket. Nama penerima boleh diisi jika diperlukan.",
     cardDisclaimer:
-      "Lacak paket hanya dengan nama + no resi. Hasil berupa data harga (ongkir) dan status paket — pembuatan/unduh invoice tidak tersedia untuk konsumen.",
-    demoBoxTitle: "Data Resi Terdaftar",
-    demoBoxDescription:
-      "Klik salah satu contoh di bawah untuk mencoba pelacakan. Data dikelola admin melalui Dashboard dan diperbarui secara real-time.",
+      "Nomor resi wajib diisi; nama penerima opsional. Detail paket ditampilkan tanpa harga atau nominal. Invoice tidak tersedia untuk konsumen.",
+    demoBoxTitle: "Pelacakan Paket",
+    demoBoxDescription: "Masukkan nomor resi untuk melihat detail paket dari sistem internal.",
     invoiceNotice:
-      "Konsumen hanya dapat melihat data harga dan status paket. Untuk faktur/invoice silakan hubungi admin.",
+      "Informasi harga dan nominal tidak ditampilkan. Untuk pertanyaan lebih lanjut, silakan hubungi admin.",
     emptyNoticeTitle: "Belum ada paket ditampilkan",
     emptyNoticeText:
-      "Isi nama dan nomor resi pada formulir, lalu tekan Cek Status Paket. Riwayat perjalanan, status, dan ongkir akan tampil di sini.",
+      "Isi nomor resi untuk melihat detail paket. Nama penerima opsional dan dapat membantu jika resi tidak ditemukan.",
   },
   kontakPage: {
     headerBadge: "Kontak",
@@ -116,7 +115,7 @@ export const DEFAULT_CMS_DATA: AppCMSData = {
       "Data paket dan status pengiriman saat ini dikelola langsung oleh admin dan diperbarui berkala melalui Dashboard, sehingga hasil pelacakan di website selalu sesuai catatan resmi.",
     infoBox2Title: "Sudah punya nomor resi?",
     infoBox2Text:
-      "Cek status dan ongkir paket Anda sendiri — cukup nama dan nomor resi, tanpa perlu menghubungi admin.",
+      "Cek status dan detail paket Anda sendiri — cukup nomor resi, tanpa perlu menghubungi admin.",
     infoBox2ButtonText: "Lacak Paket Sekarang",
   },
   services: SERVICES,

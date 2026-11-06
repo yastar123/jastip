@@ -4,7 +4,7 @@ import { ImageUploaderControl } from "./image-uploader-control";
 import { TabSaveFooter } from "./save-bars";
 import heroImg from "@/assets/hero.jpg";
 import portImg from "@/assets/port.jpg";
-import logoAsset from "@/assets/logo.png.asset.json";
+import { getSiteLogoUrl, SITE_LOGO_URL } from "@/lib/site";
 
 export function MediaCMSPanel({ onSave }: { onSave: () => void }) {
   const { draftData, updateDraft, isSaving, hasUnsavedChanges, lastSavedAt, discardDraft } =
@@ -116,8 +116,8 @@ export function MediaCMSPanel({ onSave }: { onSave: () => void }) {
         <ImageUploaderControl
           label="Logo Resmi Jastip Anggun Jaya"
           description="Tampil di navbar header utama atas dan footer bawah di seluruh halaman website."
-          value={site.logoUrl}
-          defaultValue={logoAsset.url}
+          value={getSiteLogoUrl(site.logoUrl)}
+          defaultValue={SITE_LOGO_URL}
           aspectRatio="1/1"
           onChange={handleUpdateLogo}
         />

@@ -1,4 +1,10 @@
 // Informasi utama usaha — ubah di sini jika ada perubahan data.
+export const SITE_LOGO_URL = "/logo.png";
+
+export function getSiteLogoUrl(logoUrl?: string): string {
+  return !logoUrl || logoUrl.startsWith("/__l5e/assets-v1/") ? SITE_LOGO_URL : logoUrl;
+}
+
 export const SITE = {
   name: "Jastip Anggun Jaya",
   tagline: "Layanan pengiriman paket & kendaraan ke Papua",

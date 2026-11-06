@@ -1,19 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Search,
-  ScanBarcode,
-  PackageCheck,
-  Truck,
-  Clock,
-  CircleAlert,
-  CircleCheck,
-  MapPin,
-  FileSpreadsheet,
-  Cloud,
-} from "lucide-react";
-import { type Shipment } from "@/lib/tracking";
-import { formatRupiah } from "@/lib/site";
+import { Search, ScanBarcode, CircleAlert, CircleCheck, LoaderCircle } from "lucide-react";
+import { type PublicTrackingResult } from "@/lib/tracking";
 import { useCMS } from "@/lib/cms-context";
 import { type AppCMSData } from "@/lib/cms-types";
 
@@ -25,13 +13,12 @@ export const Route = createFileRoute("/lacak")({
       {
         name: "description",
         content:
-          "Cek status dan ongkir paket Jastip Anggun Jaya cukup dengan nama dan nomor resi. Cepat, mudah, tanpa perlu telepon.",
+          "Cek status dan detail paket Jastip Anggun Jaya dengan nomor resi, nama penerima opsional.",
       },
       { property: "og:title", content: "Lacak Paket — Jastip Anggun Jaya" },
       {
         property: "og:description",
-        content:
-          "Masukkan nama dan nomor resi untuk melihat status perjalanan dan ongkir paket Anda.",
+        content: "Masukkan nomor resi untuk melihat status dan detail paket Anda.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -39,69 +26,64 @@ export const Route = createFileRoute("/lacak")({
   }),
 });
 
-const STAGE_META = {
-  diterima: { label: "Baru Diterima", cls: "bg-muted text-muted-foreground", icon: ScanBarcode },
-  perjalanan: { label: "Dalam Perjalanan", cls: "bg-secondary text-primary-deep", icon: Truck },
-  tiba: { label: "Siap Diambil", cls: "bg-accent text-accent-foreground", icon: PackageCheck },
-} as const;
-
 export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
   const { data } = useCMS();
   const cms = previewData || data;
-  const shipments = cms.shipments || [];
   const lcp = cms.lacakPage || {
     headerBadge: "Lacak Paket",
     headerTitle: "Cek posisi paket Anda di sini",
     headerDescription:
-      "Masukkan nama dan nomor resi yang Anda terima saat titip paket. Pengecekan hanya bisa dilakukan dengan nama dan no resi — nomor HP tidak dapat digunakan.",
+      "Masukkan nomor resi untuk melihat status dan detail paket. Nama penerima boleh diisi jika diperlukan.",
     cardDisclaimer:
-      "Lacak paket hanya dengan nama + no resi. Hasil berupa data harga (ongkir) dan status paket — pembuatan/unduh invoice tidak tersedia untuk konsumen.",
+      "Nomor resi wajib diisi; nama penerima opsional. Detail paket ditampilkan tanpa harga atau nominal. Invoice tidak tersedia untuk konsumen.",
     demoBoxTitle: "Data Resi Terdaftar",
     demoBoxDescription:
       "Klik salah satu contoh di bawah untuk mencoba pelacakan. Data dikelola admin melalui Dashboard dan diperbarui secara real-time.",
     invoiceNotice:
-      "Konsumen hanya dapat melihat data harga dan status paket. Untuk faktur/invoice silakan hubungi admin.",
+      "Informasi harga dan nominal tidak ditampilkan. Untuk pertanyaan lebih lanjut, silakan hubungi admin.",
     emptyNoticeTitle: "Belum ada paket ditampilkan",
     emptyNoticeText:
-      "Isi nama dan nomor resi pada formulir, lalu tekan Cek Status Paket. Riwayat perjalanan, status, dan ongkir akan tampil di sini.",
+      "Isi nomor resi untuk melihat detail paket. Nama penerima opsional dan dapat membantu jika resi tidak ditemukan.",
   };
 
   const [resi, setResi] = useState("");
   const [name, setName] = useState("");
-  const [result, setResult] = useState<Shipment | null>(null);
+  const [result, setResult] = useState<PublicTrackingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!resi.trim() || !name.trim()) {
+    if (!resi.trim()) {
       setResult(null);
-      setError("Nama dan nomor resi keduanya wajib diisi.");
+      setError("Nomor resi wajib diisi.");
       return;
     }
 
-    const r = resi.trim().toUpperCase();
-    const n = name.trim().toLowerCase();
-
-    const found = shipments.find(
-      (s) => s.resi.toUpperCase() === r && s.name.toLowerCase().includes(n),
-    );
-
-    if (!found) {
+    setIsSearching(true);
+    setResult(null);
+    setError(null);
+    try {
+      const response = await fetch("/api/public/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() || undefined, resi: resi.trim() }),
+      });
+      const payload = (await response.json()) as {
+        data?: PublicTrackingResult;
+        error?: string;
+      };
+      if (!response.ok || !payload.data) {
+        setError(payload.error || "Pelacakan gagal. Silakan coba lagi.");
+        return;
+      }
+      setResult(payload.data);
+    } catch {
       setResult(null);
-      setError(
-        "Paket tidak ditemukan. Periksa kembali nama dan nomor resi Anda, atau hubungi admin.",
-      );
-      return;
+      setError("Layanan pelacakan tidak dapat dihubungi. Silakan coba lagi.");
+    } finally {
+      setIsSearching(false);
     }
-    setError(null);
-    setResult(found);
-  };
-
-  const fillDemo = (demo: Shipment) => {
-    setResi(demo.resi);
-    setName(demo.name);
-    setError(null);
-    setResult(demo);
   };
 
   return (
@@ -131,11 +113,12 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
               <h2 className="text-lg font-extrabold">Data Pelacakan</h2>
               <div className="gold-rule mt-3 w-14" />
               <label className="mt-6 block">
-                <span className="text-sm font-bold">Nama Penerima / Pengirim</span>
+                <span className="text-sm font-bold">Nama Penerima / Pengirim (Opsional)</span>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Contoh: Budi Santoso"
+                  autoComplete="name"
+                  placeholder="Boleh dikosongkan"
                   className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-shadow placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-ring"
                 />
               </label>
@@ -144,16 +127,23 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
                 <input
                   value={resi}
                   onChange={(e) => setResi(e.target.value)}
+                  autoComplete="off"
+                  required
                   placeholder="Contoh: AJH-1024"
                   className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm uppercase outline-none transition-shadow placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-ring"
                 />
               </label>
               <button
                 type="submit"
+                disabled={isSearching}
                 className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-elegant transition-colors hover:bg-primary-deep"
               >
-                <Search className="size-4" />
-                Cek Status Paket
+                {isSearching ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <Search className="size-4" />
+                )}
+                {isSearching ? "Mencari Paket..." : "Cek Status Paket"}
               </button>
               {error && (
                 <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -166,39 +156,6 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
                 <span>{lcp.cardDisclaimer}</span>
               </div>
             </form>
-
-            <div className="rounded-3xl border border-border bg-card p-6 sm:p-7">
-              <div className="flex items-center gap-2.5">
-                <Cloud className="size-4 text-gold-deep" />
-                <h3 className="text-sm font-extrabold">{lcp.demoBoxTitle}</h3>
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                {lcp.demoBoxDescription}
-              </p>
-              {shipments.length === 0 ? (
-                <div className="mt-4 rounded-xl border border-dashed border-border bg-secondary/30 p-4 text-center text-xs text-muted-foreground">
-                  Belum ada resi pengiriman aktif. Admin dapat menambahkan data resi baru melalui
-                  Dashboard Admin.
-                </div>
-              ) : (
-                <ul className="mt-4 space-y-2">
-                  {shipments.slice(0, 5).map((demo) => (
-                    <li key={demo.resi}>
-                      <button
-                        type="button"
-                        onClick={() => fillDemo(demo)}
-                        className="w-full rounded-xl border border-border bg-background px-4 py-3 text-left transition-colors hover:border-gold/60 hover:bg-accent/40"
-                      >
-                        <span className="block text-xs font-extrabold uppercase tracking-wide text-primary">
-                          {demo.resi}
-                        </span>
-                        <span className="text-xs text-muted-foreground">{demo.name}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
           </div>
 
           {/* HASIL */}
@@ -213,76 +170,30 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
                     <p className="text-xl font-extrabold tracking-wide text-primary sm:text-2xl">
                       {result.resi}
                     </p>
-                    <p className="mt-0.5 text-sm font-semibold text-muted-foreground">
-                      {result.name}
-                    </p>
                   </div>
-                  {(() => {
-                    const meta = STAGE_META[result.stage] || STAGE_META.diterima;
-                    const Icon = meta.icon;
-                    return (
-                      <span
-                        className={
-                          "inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-extrabold " +
-                          meta.cls
-                        }
-                      >
-                        <Icon className="size-4" />
-                        {meta.label}
-                      </span>
-                    );
-                  })()}
+                  <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-xs font-extrabold text-primary-deep">
+                    <CircleCheck className="size-4" />
+                    {result.status}
+                  </span>
                 </div>
 
-                <div className="grid gap-4 px-6 py-6 sm:grid-cols-2 sm:px-8">
-                  <Detail label="Layanan" value={result.service} />
-                  <Detail label="Rute" value={result.route} />
-                  <Detail label="Berat / Volume" value={result.weight} />
-                  <Detail label="Status" value={result.status} />
-                  <Detail label="Terakhir Diperbarui" value={result.updated} icon={Clock} />
-                  <div className="rounded-2xl bg-gradient-red px-5 py-4 text-primary-foreground shadow-elegant">
-                    <p className="text-xs font-bold uppercase tracking-wider text-gold">
-                      Data Harga (Ongkir)
-                    </p>
-                    <p className="mt-1 text-2xl font-extrabold">{formatRupiah(result.price)}</p>
+                <div className="px-6 py-6 sm:px-8">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Detail label="No Paket" value={result.packageNumber || "-"} />
+                    <Detail label="Tanggal" value={formatPackageDate(result.packageDate)} />
+                    <Detail label="Jenis Jastip" value={result.serviceType || "-"} />
+                    <Detail label="Rute Pengiriman" value={result.route || "-"} />
+                    <Detail label="Berat Real" value={formatWeight(result.realWeight)} />
+                    <Detail label="Berat Volume" value={formatWeight(result.volumeWeight)} />
+                    <Detail label="Berat Digunakan" value={formatWeight(result.billableWeight)} />
+                    <Detail
+                      label="Keterangan Biaya Tambahan"
+                      value={result.additionalFeeDescription || "-"}
+                    />
                   </div>
-                </div>
-
-                <div className="border-t border-border px-6 py-6 sm:px-8">
-                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-muted-foreground">
-                    Riwayat Perjalanan
-                  </h3>
-                  <ol className="mt-5 space-y-0">
-                    {result.timeline.map((event, i) => {
-                      const last = i === result.timeline.length - 1;
-                      return (
-                        <li key={i} className="relative flex gap-4 pb-6 last:pb-0">
-                          {i < result.timeline.length - 1 && (
-                            <span className="absolute left-[7px] top-4 h-full w-0.5 bg-border" />
-                          )}
-                          <span
-                            className={
-                              "relative mt-1 size-3.5 shrink-0 rounded-full border-2 " +
-                              (last
-                                ? "border-gold-deep bg-gold"
-                                : "border-primary/50 bg-background")
-                            }
-                          />
-                          <div>
-                            <p className="text-sm font-bold leading-snug">{event.note}</p>
-                            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <MapPin className="size-3" />
-                              {event.place} • {event.time}
-                            </p>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ol>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 border-t border-border bg-secondary/40 px-6 py-5 sm:px-8">
-                  <FileSpreadsheet className="size-4 text-muted-foreground" />
                   <p className="text-xs text-muted-foreground">{lcp.invoiceNotice}</p>
                   <Link
                     to="/kontak"
@@ -308,6 +219,25 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
       </div>
     </div>
   );
+}
+
+function formatPackageDate(value: string | null): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function formatWeight(value: string | null): string {
+  if (!value) return "-";
+  const weight = Number(value.replace(",", "."));
+  if (!Number.isFinite(weight)) return value;
+  return `${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 3 }).format(weight)} Kg`;
 }
 
 function Detail({

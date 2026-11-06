@@ -11,28 +11,15 @@ async function pushDatabase() {
   console.log("  JASTIP ANGGUN JAYA — DATABASE PUSH (PostgreSQL)");
   console.log("==========================================");
 
-  const connectionString =
-    process.env.DATABASE_URL ||
-    (process.env.SQL_USER && process.env.SQL_HOST
-      ? `postgresql://${process.env.SQL_USER}:${process.env.SQL_PASSWORD || ""}@${process.env.SQL_HOST}/${process.env.SQL_DB_NAME || "postgres"}`
-      : undefined);
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error(
+      "DATABASE_URL is required for db:push. Set it to the separate CMS database, never the read-only tracking database.",
+    );
+  }
 
-  console.log(
-    `[INFO] Target: ${connectionString ? connectionString.replace(/:[^:@]+@/, ":****@") : "Default local PostgreSQL (5432)"}`,
-  );
-
-  const pool = new Pool(
-    connectionString
-      ? { connectionString, connectionTimeoutMillis: 8000 }
-      : {
-          host: process.env.PGHOST || "localhost",
-          port: Number(process.env.PGPORT || 5432),
-          user: process.env.PGUSER || "postgres",
-          password: process.env.PGPASSWORD || "postgres",
-          database: process.env.PGDATABASE || "jastip_anggun_jaya",
-          connectionTimeoutMillis: 8000,
-        },
-  );
+  console.log("[INFO] Target configured through DATABASE_URL.");
+  const pool = new Pool({ connectionString, connectionTimeoutMillis: 8000 });
 
   try {
     console.log("[INFO] Connecting to PostgreSQL database...");
@@ -118,17 +105,14 @@ async function pushDatabase() {
     }
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    console.warn("------------------------------------------");
-    console.warn("[WARNING] Could not connect to PostgreSQL server:");
-    console.warn("  ", errorMsg);
-    console.warn("\nCatatan: Aplikasi web memiliki sistem persistent storage");
-    console.warn("otomatis (file data/cms-data.json) sehingga tetap berjalan normal.");
-    console.warn("Jika ingin menyambungkan ke PostgreSQL server, pastikan PostgreSQL aktif");
-    console.warn("dan periksa variabel DATABASE_URL di file .env");
-    console.warn("------------------------------------------");
+    console.error("Could not push CMS database schema:", errorMsg);
+    throw err;
   } finally {
     await pool.end();
   }
 }
 
-pushDatabase().catch(console.error);
+pushDatabase().catch((err: unknown) => {
+  console.error(err);
+  process.exitCode = 1;
+});

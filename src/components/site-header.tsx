@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, X, PhoneCall } from "lucide-react";
-import logo from "@/assets/logo.png.asset.json";
-import { waLink } from "@/lib/site";
+import { getSiteLogoUrl, waLink } from "@/lib/site";
 import { useCMS } from "@/lib/cms-context";
 
 const NAV = [
@@ -25,7 +24,7 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:h-20">
         <Link to="/" className="flex items-center gap-3" onClick={() => setOpen(false)}>
           <img
-            src={site?.logoUrl || logo.url}
+            src={getSiteLogoUrl(site?.logoUrl)}
             alt={site?.name || "Jastip Anggun Jaya"}
             className="h-10 w-10 object-contain shadow-elegant sm:h-12 sm:w-12"
           />

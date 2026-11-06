@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { MapPin, Clock, PhoneCall, SlidersHorizontal } from "lucide-react";
-import logo from "@/assets/logo.png.asset.json";
-import { waLink } from "@/lib/site";
+import { getSiteLogoUrl, waLink } from "@/lib/site";
 import { useCMS } from "@/lib/cms-context";
 
 export function SiteFooter() {
@@ -14,7 +13,7 @@ export function SiteFooter() {
         <div className="sm:col-span-2">
           <div className="flex items-center gap-3">
             <img
-              src={site?.logoUrl || logo.url}
+              src={getSiteLogoUrl(site?.logoUrl)}
               alt={site?.name || "Jastip Anggun Jaya"}
               className="h-12 w-12 rounded-lg bg-white/10 p-1 object-contain"
             />

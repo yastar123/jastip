@@ -33,7 +33,6 @@ import {
 } from "lucide-react";
 import { useCMS } from "@/lib/cms-context";
 import { useAuth } from "@/lib/auth-context";
-import logo from "@/assets/logo.png.asset.json";
 import heroImg from "@/assets/hero.jpg";
 import portImg from "@/assets/port.jpg";
 import { HomePageView } from "./index";
@@ -42,7 +41,7 @@ import { LacakPageView } from "./lacak";
 import { KontakPageView } from "./kontak";
 import { type Shipment } from "@/lib/tracking";
 import { type Service } from "@/lib/services";
-import { formatRupiah } from "@/lib/site";
+import { formatRupiah, getSiteLogoUrl, SITE_LOGO_URL } from "@/lib/site";
 import { toast } from "sonner";
 import { ImageUploaderControl } from "@/components/admin/image-uploader-control";
 import { FloatingSaveBar, TabSaveFooter } from "@/components/admin/save-bars";
@@ -1360,9 +1359,9 @@ function LacakPageCMSPanel({ onSave }: { onSave?: () => void }) {
     headerBadge: "Lacak Paket",
     headerTitle: "Cek posisi paket Anda di sini",
     headerDescription:
-      "Masukkan nama dan nomor resi yang Anda terima saat titip paket. Pengecekan hanya bisa dilakukan dengan nama dan no resi — nomor HP tidak dapat digunakan.",
+      "Masukkan nomor resi untuk melihat status dan detail paket. Nama penerima boleh diisi jika diperlukan.",
     cardDisclaimer:
-      "Lacak paket hanya dengan nama + no resi. Hasil berupa data harga (ongkir) dan status paket — pembuatan/unduh invoice tidak tersedia untuk konsumen.",
+      "Nomor resi wajib diisi; nama penerima opsional. Detail paket ditampilkan tanpa harga atau nominal. Invoice tidak tersedia untuk konsumen.",
     demoBoxTitle: "Data Resi Terdaftar",
     demoBoxDescription:
       "Klik salah satu contoh di bawah untuk mencoba pelacakan. Data dikelola admin melalui Dashboard dan diperbarui secara real-time.",
@@ -1370,7 +1369,7 @@ function LacakPageCMSPanel({ onSave }: { onSave?: () => void }) {
       "Konsumen hanya dapat melihat data harga dan status paket. Untuk faktur/invoice silakan hubungi admin.",
     emptyNoticeTitle: "Belum ada paket ditampilkan",
     emptyNoticeText:
-      "Isi nama dan nomor resi pada formulir, lalu tekan Cek Status Paket. Riwayat perjalanan, status, dan ongkir akan tampil di sini.",
+      "Isi nomor resi pada formulir, lalu tekan Cek Status Paket. Nama penerima opsional dan dapat membantu jika resi tidak ditemukan.",
   };
 
   const shipments = draftData.shipments;
@@ -1845,7 +1844,7 @@ function KontakPageCMSPanel({ onSave }: { onSave?: () => void }) {
       "Data paket dan status pengiriman saat ini dikelola langsung oleh admin dan diperbarui berkala melalui Dashboard, sehingga hasil pelacakan di website selalu sesuai catatan resmi.",
     infoBox2Title: "Sudah punya nomor resi?",
     infoBox2Text:
-      "Cek status dan ongkir paket Anda sendiri — cukup nama dan nomor resi, tanpa perlu menghubungi admin.",
+      "Cek status dan detail paket Anda sendiri — cukup nomor resi, tanpa perlu menghubungi admin.",
     infoBox2ButtonText: "Lacak Paket Sekarang",
   };
 
@@ -2134,8 +2133,8 @@ function GlobalBrandCMSPanel({ onSave }: { onSave?: () => void }) {
         <ImageUploaderControl
           label="Logo Resmi (Header Navbar & Footer)"
           description="Logo resmi perusahaan yang tampil pada bagian navigasi atas dan footer."
-          value={site.logoUrl}
-          defaultValue={logo.url}
+          value={getSiteLogoUrl(site.logoUrl)}
+          defaultValue={SITE_LOGO_URL}
           aspectRatio="1/1"
           onChange={(val) => handleChange("logoUrl", val)}
         />
@@ -2158,8 +2157,8 @@ function GlobalBrandCMSPanel({ onSave }: { onSave?: () => void }) {
 
 function AdminLoginView() {
   const { login } = useAuth();
-  const [email, setEmail] = useState("admin@jastipanggunjaya.com");
-  const [password, setPassword] = useState("adminanggunjaya2026");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -2183,13 +2182,6 @@ function AdminLoginView() {
     }
   };
 
-  const fillDefaultCredentials = () => {
-    setEmail("admin@jastipanggunjaya.com");
-    setPassword("adminanggunjaya2026");
-    setError(null);
-    toast.info("Kredensial default dari .env terisi.");
-  };
-
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
       {/* LEFT PANEL: VISUAL HERO BRANDING (50% ON DESKTOP) */}
@@ -2210,7 +2202,7 @@ function AdminLoginView() {
         <div className="relative z-10">
           <Link to="/" className="inline-flex items-center gap-3">
             <img
-              src={logo.url}
+              src={SITE_LOGO_URL}
               alt="Logo Jastip Anggun Jaya"
               className="size-14 rounded-2xl bg-white/10 p-1.5 shadow-elegant backdrop-blur-sm ring-1 ring-gold/40"
             />
@@ -2283,7 +2275,11 @@ function AdminLoginView() {
         {/* Center Form Container (NOT A CARD, FULL FLOW) */}
         <div className="my-auto w-full max-w-md py-8">
           <div className="mb-6 flex items-center gap-3 lg:hidden">
-            <img src={logo.url} alt="Logo" className="size-12 rounded-xl bg-card p-1 shadow-sm" />
+            <img
+              src={SITE_LOGO_URL}
+              alt="Logo"
+              className="size-12 rounded-xl bg-card p-1 shadow-sm"
+            />
             <div>
               <h3 className="font-extrabold text-foreground">Jastip Anggun Jaya</h3>
               <p className="text-xs text-muted-foreground">Dashboard Admin</p>
@@ -2312,7 +2308,7 @@ function AdminLoginView() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@jastipanggunjaya.com"
+                  placeholder="admin@example.com"
                   required
                   className="w-full rounded-2xl border border-input bg-card py-3.5 pl-11 pr-4 text-sm font-semibold outline-none transition-shadow focus:border-primary focus:ring-2 focus:ring-ring"
                 />
@@ -2359,15 +2355,6 @@ function AdminLoginView() {
             >
               <KeyRound className="size-4" />
               <span>{isLoading ? "Memverifikasi..." : "Masuk ke Dashboard"}</span>
-            </button>
-
-            {/* Quick Fill Default Button */}
-            <button
-              type="button"
-              onClick={fillDefaultCredentials}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-2xl border border-border bg-muted/40 py-2.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <span>Isi Otomatis Kredensial (.env)</span>
             </button>
           </form>
         </div>

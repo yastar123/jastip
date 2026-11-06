@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { type AppCMSData } from "../lib/cms-types";
 import { DEFAULT_CMS_DATA } from "../lib/cms-defaults";
+import { type PublicTrackingResult } from "../lib/tracking";
 
 dotenv.config();
 
@@ -12,6 +13,7 @@ const { Pool } = pg;
 // Global persistent cache
 let isPgConnected = false;
 let pgPool: pg.Pool | null = null;
+let trackingPool: pg.Pool | null = null;
 
 const DATA_DIR = path.resolve(process.cwd(), "data");
 const FALLBACK_FILE = path.join(DATA_DIR, "cms-data.json");
@@ -53,26 +55,11 @@ let inMemoryData: AppCMSData = loadFromFile();
 export function getDatabasePool(): pg.Pool | null {
   if (pgPool) return pgPool;
 
-  const connectionString =
-    process.env.DATABASE_URL ||
-    (process.env.SQL_USER && process.env.SQL_HOST
-      ? `postgresql://${process.env.SQL_USER}:${process.env.SQL_PASSWORD || ""}@${process.env.SQL_HOST}/${process.env.SQL_DB_NAME || "postgres"}`
-      : undefined);
+  const connectionString = process.env.DATABASE_URL;
 
-  if (connectionString || (process.env.PGHOST && process.env.PGDATABASE)) {
+  if (connectionString) {
     try {
-      pgPool = new Pool(
-        connectionString
-          ? { connectionString, connectionTimeoutMillis: 5000 }
-          : {
-              host: process.env.PGHOST,
-              port: Number(process.env.PGPORT || 5432),
-              user: process.env.PGUSER,
-              password: process.env.PGPASSWORD,
-              database: process.env.PGDATABASE,
-              connectionTimeoutMillis: 5000,
-            },
-      );
+      pgPool = new Pool({ connectionString, connectionTimeoutMillis: 5000 });
 
       pgPool.on("error", (err) => {
         console.warn("PostgreSQL idle client error (falling back to storage):", err.message);
@@ -85,6 +72,179 @@ export function getDatabasePool(): pg.Pool | null {
   }
 
   return pgPool;
+}
+
+function getTrackingDatabasePool(): pg.Pool | null {
+  if (trackingPool) return trackingPool;
+  const connectionString = process.env.TRACKING_DATABASE_URL;
+  if (!connectionString) return null;
+
+  trackingPool = new Pool({
+    connectionString,
+    connectionTimeoutMillis: 5000,
+    options: "-c default_transaction_read_only=on",
+    max: 5,
+  });
+  trackingPool.on("error", (err) => {
+    console.error("Tracking database connection error:", err.message);
+  });
+  return trackingPool;
+}
+
+export async function isTrackingDatabaseAvailable(): Promise<boolean> {
+  const pool = getTrackingDatabasePool();
+  if (!pool) return false;
+  try {
+    await pool.query("SELECT 1");
+    return true;
+  } catch (err) {
+    console.error("Tracking database health check failed:", err);
+    return false;
+  }
+}
+
+type PublicPackageRow = {
+  resi: string;
+  package_number: string | null;
+  package_date: string | null;
+  service_type: string | null;
+  route: string | null;
+  real_weight: string | null;
+  volume_weight: string | null;
+  billable_weight: string | null;
+  additional_fee_description: string | null;
+  all_picked_up: boolean;
+  all_verified: boolean;
+};
+
+type PublicPackageQuery = (
+  text: string,
+  values: (string | null)[],
+) => Promise<{ rows: PublicPackageRow[] }>;
+
+export async function findPublicPackage(
+  name: string | undefined,
+  resi: string,
+  queryOverride?: PublicPackageQuery,
+): Promise<PublicTrackingResult | null> {
+  let query = queryOverride;
+  if (!query) {
+    const pool = getTrackingDatabasePool();
+    if (!pool) {
+      throw new Error("TRACKING_DATABASE_URL is not configured");
+    }
+    query = (text, values) => pool.query<PublicPackageRow>(text, values);
+  }
+
+  const result = await query(
+    `WITH matched_packages AS (
+       SELECT packages.*, to_jsonb(packages) AS package_data
+       FROM packages
+       WHERE UPPER(BTRIM(resi_number)) = UPPER(BTRIM($1))
+         AND ($2::text IS NULL OR LOWER(BTRIM(customer_name)) = LOWER(BTRIM($2)))
+     ),
+     public_package_rows AS (
+       SELECT
+         UPPER(BTRIM(resi_number)) AS resi_key,
+         LOWER(BTRIM(customer_name)) AS customer_key,
+         BTRIM(resi_number) AS resi,
+         COALESCE(
+           NULLIF(BTRIM(package_data->>'no_paket'), ''),
+           NULLIF(BTRIM(package_data->>'package_number'), ''),
+           NULLIF(BTRIM(package_data->>'package_no'), ''),
+           NULLIF(BTRIM(package_data->>'nomor_paket'), '')
+         ) AS package_number,
+         COALESCE(
+           NULLIF(BTRIM(package_data->>'tanggal'), ''),
+           NULLIF(BTRIM(package_data->>'tanggal_paket'), ''),
+           NULLIF(BTRIM(package_data->>'tanggal_masuk'), ''),
+           NULLIF(BTRIM(package_data->>'package_date'), ''),
+           NULLIF(BTRIM(package_data->>'created_at'), '')
+         ) AS package_date,
+         COALESCE(
+           NULLIF(BTRIM(package_data->>'jenis_jastip'), ''),
+           NULLIF(BTRIM(package_data->>'service_type'), ''),
+           NULLIF(BTRIM(package_data->>'jenis'), ''),
+           NULLIF(BTRIM(package_data->>'tipe_jastip'), '')
+         ) AS service_type,
+         COALESCE(
+           NULLIF(BTRIM(package_data->>'rute_pengiriman'), ''),
+           NULLIF(BTRIM(package_data->>'rute'), ''),
+           NULLIF(BTRIM(package_data->>'route'), ''),
+           NULLIF(CONCAT_WS(' → ',
+             NULLIF(COALESCE(package_data->>'asal', package_data->>'origin', package_data->>'kota_asal'), ''),
+             NULLIF(COALESCE(package_data->>'tujuan', package_data->>'destination', package_data->>'kota_tujuan'), '')
+           ), '')
+         ) AS route,
+         NULLIF(REPLACE(COALESCE(
+           NULLIF(package_data->>'berat_real', ''),
+           NULLIF(package_data->>'real_weight', ''),
+           NULLIF(package_data->>'weight_real', ''),
+           NULLIF(package_data->>'berat_aktual', ''),
+           NULLIF(package_data->>'berat', '')
+         ), ',', '.'), '')::numeric AS real_weight,
+         NULLIF(REPLACE(COALESCE(
+           NULLIF(package_data->>'berat_volume', ''),
+           NULLIF(package_data->>'volume_weight', ''),
+           NULLIF(package_data->>'weight_volume', ''),
+           NULLIF(package_data->>'berat_volumetrik', '')
+         ), ',', '.'), '')::numeric AS volume_weight,
+         NULLIF(REPLACE(COALESCE(
+           NULLIF(package_data->>'berat_digunakan', ''),
+           NULLIF(package_data->>'used_weight', ''),
+           NULLIF(package_data->>'chargeable_weight', ''),
+           NULLIF(package_data->>'berat_tagihan', ''),
+           NULLIF(package_data->>'berat_dipakai', '')
+         ), ',', '.'), '')::numeric AS billable_weight,
+         COALESCE(
+           NULLIF(BTRIM(package_data->>'keterangan_biaya_tambahan'), ''),
+           NULLIF(BTRIM(package_data->>'additional_fee_description'), ''),
+           NULLIF(BTRIM(package_data->>'catatan_biaya_tambahan'), '')
+         ) AS additional_fee_description,
+         UPPER(BTRIM(COALESCE(status_pengambilan, ''))) = 'SUDAH_DIAMBIL' AS picked_up,
+         UPPER(BTRIM(COALESCE(status_verifikasi, ''))) = 'SUDAH_DIVERIFIKASI' AS verified
+       FROM matched_packages
+     )
+     SELECT
+       MIN(resi) AS resi,
+       MIN(package_number) AS package_number,
+       MIN(package_date) AS package_date,
+       MIN(service_type) AS service_type,
+       MIN(route) AS route,
+       CASE WHEN COUNT(real_weight) = 0 THEN NULL ELSE SUM(real_weight)::text END AS real_weight,
+       CASE WHEN COUNT(volume_weight) = 0 THEN NULL ELSE SUM(volume_weight)::text END AS volume_weight,
+       CASE WHEN COUNT(billable_weight) = 0 THEN NULL ELSE SUM(billable_weight)::text END AS billable_weight,
+       MIN(additional_fee_description) AS additional_fee_description,
+       BOOL_AND(picked_up) AS all_picked_up,
+       BOOL_AND(verified) AS all_verified
+     FROM public_package_rows
+     GROUP BY resi_key, customer_key
+       ORDER BY resi_key, customer_key
+       LIMIT 2`,
+    [resi, name?.trim() || null],
+  );
+  if (!name && result.rows.length > 1) return null;
+  const row = result.rows[0];
+  if (!row) return null;
+
+  const status = row.all_picked_up
+    ? "Paket sudah diambil"
+    : row.all_verified
+      ? "Paket tiba di gudang"
+      : "Paket dalam proses pengiriman";
+
+  return {
+    resi: row.resi,
+    packageNumber: row.package_number,
+    packageDate: row.package_date,
+    serviceType: row.service_type,
+    route: row.route,
+    realWeight: row.real_weight,
+    volumeWeight: row.volume_weight,
+    billableWeight: row.billable_weight,
+    additionalFeeDescription: row.additional_fee_description,
+    status,
+  };
 }
 
 export async function initDatabase() {
