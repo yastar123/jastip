@@ -157,9 +157,5 @@
 @utility gold-rule {
   height: 3px;
   border-radius: 999px;
-  background-image: linear-gradient(
-    90deg,
-    var(--gold) 0%,
-    var(--gold-deep) 100%
-  );
+  background-image: linear-gradient(90deg, var(--gold) 0%, var(--gold-deep) 100%);
 }

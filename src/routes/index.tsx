@@ -17,11 +17,12 @@ import {
 } from "lucide-react";
 import heroImg from "@/assets/hero.jpg";
 import portImg from "@/assets/port.jpg";
-import { SERVICES } from "@/lib/services";
-import { SITE, waLink, formatRupiah } from "@/lib/site";
+import { waLink, formatRupiah } from "@/lib/site";
+import { useCMS } from "@/lib/cms-context";
+import { type AppCMSData } from "@/lib/cms-types";
 
 export const Route = createFileRoute("/")({
-  component: Index,
+  component: IndexRouteComponent,
   head: () => ({
     meta: [
       { title: "Jastip Anggun Jaya — Jasa Titip & Pengiriman Paket ke Papua" },
@@ -44,69 +45,41 @@ export const Route = createFileRoute("/")({
 
 const SERVICE_ICONS = [Package, Plane, Boxes, Ship] as const;
 
-const STEPS = [
-  {
-    no: "01",
-    title: "Kirim & Registrasi",
-    text: "Bawa atau kirim paket Anda ke gudang kami di Jakarta atau Surabaya, lalu admin mencatat data pengiriman.",
-  },
-  {
-    no: "02",
-    title: "Proses & Barcode",
-    text: "Paket diproses sesuai layanan pilihan Anda — setiap paket kargo mendapat barcode sendiri.",
-  },
-  {
-    no: "03",
-    title: "Tiba di Manokwari",
-    text: "Pantau perjalanan paket lewat halaman Lacak Paket, lalu ambil di gudang kami di Manokwari.",
-  },
-];
+const FEATURE_ICON_MAP = {
+  ShieldCheck,
+  Wallet,
+  ScanBarcode,
+  Headset,
+};
 
-const FEATURES = [
-  {
-    icon: ShieldCheck,
-    title: "Aman & Terpercaya",
-    text: "Paket ditangani langsung oleh tim berpengalaman, dari gudang asal sampai Manokwari.",
-  },
-  {
-    icon: Wallet,
-    title: "Tarif Transparan",
-    text: "Daftar tarif jelas per layanan — flat, bracket, maupun berjenjang. Tanpa biaya tersembunyi.",
-  },
-  {
-    icon: ScanBarcode,
-    title: "Bisa Dilacak",
-    text: "Cek status paket kapan saja cukup dengan nama dan nomor resi — tanpa perlu telepon.",
-  },
-  {
-    icon: Headset,
-    title: "Admin Siap Membantu",
-    text: "Ada pertanyaan soal tarif atau paket? Tombol Hubungi Admin selalu tersedia.",
-  },
-];
+export function HomePageView({ previewData }: { previewData?: AppCMSData }) {
+  const { data } = useCMS();
+  const cms = previewData || data;
+  const site = cms.site;
+  const home = cms.home;
+  const services = cms.services;
 
-function Index() {
   return (
     <div>
       {/* HERO */}
       <section className="relative overflow-hidden">
         <img
-          src={heroImg}
+          src={home.heroImage || heroImg}
           alt="Paket dan kontainer pengiriman ke Papua"
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="relative mx-auto flex min-h-[560px] max-w-6xl flex-col justify-center px-4 py-20 sm:min-h-[640px]">
           <span className="inline-flex w-fit items-center gap-2 rounded-full bg-background/70 px-4 py-2 text-xs font-bold uppercase tracking-wider text-foreground ring-1 ring-gold/50 backdrop-blur-sm">
             <RouteIcon className="size-3.5 text-gold-deep" />
-            {SITE.cities}
+            {home.hero.badge || site.cities}
           </span>
           <h1 className="mt-6 max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Jastip & Pengiriman{" "}
-            <span className="text-gradient-gold">Paket & Kendaraan</span> ke Papua
+            {home.hero.titlePrefix}{" "}
+            <span className="text-gradient-gold">{home.hero.titleHighlight}</span>{" "}
+            {home.hero.titleSuffix}
           </h1>
           <p className="mt-5 w-fit max-w-xl rounded-2xl bg-background/85 px-5 py-4 text-base font-semibold leading-relaxed text-foreground shadow-elegant backdrop-blur-md sm:text-lg">
-            {SITE.name} mengantar paket Anda dengan aman — pilih layanan tercepat
-            atau yang paling hemat, dan pantau perjalanannya langsung dari sini.
+            {home.hero.description}
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
@@ -114,27 +87,23 @@ function Index() {
               className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-sm font-bold text-background shadow-elegant transition-transform hover:scale-[1.03]"
             >
               <Search className="size-4" />
-              Lacak Paket Saya
+              {home.hero.trackButtonText || "Lacak Paket Saya"}
             </Link>
             <a
-              href={waLink()}
+              href={waLink(site.waMessage, site.whatsapp)}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-full bg-background/80 px-6 py-3.5 text-sm font-bold text-foreground shadow-elegant backdrop-blur-sm transition-colors hover:text-primary-deep"
             >
               <PhoneCall className="size-4" />
-              Hubungi Admin
+              {home.hero.contactButtonText || "Hubungi Admin"}
             </a>
           </div>
           <div className="mt-12 w-fit flex-wrap gap-6 rounded-2xl bg-background/85 px-5 py-4 text-sm font-semibold text-foreground shadow-elegant backdrop-blur-md sm:flex">
-            {[
-              ["4", "Pilihan Layanan"],
-              ["3", "Kota Asal"],
-              ["1", "Tujuan: Manokwari"],
-            ].map(([num, label]) => (
-              <div key={label} className="flex items-center gap-3">
-                <span className="text-3xl font-extrabold text-gold-deep">{num}</span>
-                <span className="max-w-[90px] leading-tight">{label}</span>
+            {home.hero.stats.map((stat) => (
+              <div key={stat.label} className="flex items-center gap-3">
+                <span className="text-3xl font-extrabold text-gold-deep">{stat.number}</span>
+                <span className="max-w-[100px] leading-tight">{stat.label}</span>
               </div>
             ))}
           </div>
@@ -151,7 +120,7 @@ function Index() {
           <div className="gold-rule mx-auto mt-5 w-20" />
         </div>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {SERVICES.map((service, i) => {
+          {services.map((service, i) => {
             const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length] ?? Package;
             return (
               <Link
@@ -173,7 +142,8 @@ function Index() {
                   <p className="text-lg font-extrabold text-primary">
                     {formatRupiah(service.startingFrom)}
                     <span className="text-xs font-semibold text-muted-foreground">
-                      {" "}/{service.unit}
+                      {" "}
+                      /{service.unit}
                     </span>
                   </p>
                   <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-gold-deep group-hover:underline">
@@ -197,11 +167,8 @@ function Index() {
             <div className="gold-rule mx-auto mt-5 w-20" />
           </div>
           <div className="mt-10 grid gap-5 md:grid-cols-3">
-            {STEPS.map((step) => (
-              <div
-                key={step.no}
-                className="relative rounded-2xl border border-border bg-card p-7"
-              >
+            {home.steps.map((step) => (
+              <div key={step.no} className="relative rounded-2xl border border-border bg-card p-7">
                 <span className="text-4xl font-extrabold text-gradient-gold">{step.no}</span>
                 <h3 className="mt-3 text-lg font-extrabold">{step.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.text}</p>
@@ -221,22 +188,25 @@ function Index() {
           <div className="gold-rule mx-auto mt-5 w-20" />
         </div>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="rounded-2xl border border-border bg-card p-6">
-              <span className="inline-flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                <f.icon className="size-5" />
-              </span>
-              <h3 className="mt-4 font-extrabold">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.text}</p>
-            </div>
-          ))}
+          {home.features.map((f) => {
+            const Icon = FEATURE_ICON_MAP[f.iconName] || ShieldCheck;
+            return (
+              <div key={f.title} className="rounded-2xl border border-border bg-card p-6">
+                <span className="inline-flex size-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <Icon className="size-5" />
+                </span>
+                <h3 className="mt-4 font-extrabold">{f.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.text}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
       {/* JANGKAUAN */}
       <section className="relative overflow-hidden">
         <img
-          src={portImg}
+          src={home.portImage || portImg}
           alt="Kapal kargo tiba di pelabuhan Papua"
           loading="lazy"
           className="absolute inset-0 h-full w-full object-cover"
@@ -244,12 +214,14 @@ function Index() {
         <div className="absolute inset-0 bg-gradient-to-r from-primary-deep/95 via-primary-deep/80 to-primary-deep/40" />
         <div className="relative mx-auto max-w-6xl px-4 py-20 sm:py-28">
           <div className="max-w-xl">
-            <p className="text-sm font-bold uppercase tracking-widest text-gold">Jangkauan Kiriman</p>
+            <p className="text-sm font-bold uppercase tracking-widest text-gold">
+              Jangkauan Kiriman
+            </p>
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-primary-foreground sm:text-4xl">
               Dari kota besar Jawa & Sulawesi, langsung ke Manokwari
             </h2>
             <div className="mt-8 space-y-3">
-              {["Jakarta", "Surabaya", "Makassar"].map((city) => (
+              {(home.citiesReach || ["Jakarta", "Surabaya", "Makassar"]).map((city) => (
                 <div
                   key={city}
                   className="flex items-center justify-between rounded-xl bg-background/10 px-5 py-3.5 backdrop-blur-sm ring-1 ring-primary-foreground/15"
@@ -272,18 +244,17 @@ function Index() {
           <div className="absolute -bottom-20 -left-16 size-56 rounded-full bg-background/10 blur-2xl" />
           <div className="relative">
             <h2 className="mx-auto max-w-xl text-3xl font-extrabold tracking-tight text-primary-foreground sm:text-4xl">
-              Sudah titip paket? Lacak sekarang
+              {home.cta.title}
             </h2>
             <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-primary-foreground/85 sm:text-base">
-              Cukup masukkan <strong>nama</strong> dan <strong>nomor resi</strong> —
-              status dan ongkir paket Anda langsung tampil.
+              {home.cta.text}
             </p>
             <Link
               to="/lacak"
               className="mt-8 inline-flex items-center gap-2 rounded-full bg-gradient-gold px-7 py-3.5 text-sm font-bold text-foreground shadow-gold transition-transform hover:scale-[1.03]"
             >
               <Search className="size-4" />
-              Lacak Paket Sekarang
+              {home.cta.buttonText || "Lacak Paket Sekarang"}
             </Link>
           </div>
         </div>
@@ -298,7 +269,7 @@ function Index() {
             </span>
             <div>
               <p className="font-extrabold">Alamat Gudang</p>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{SITE.address}</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{site.address}</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
@@ -307,7 +278,7 @@ function Index() {
             </span>
             <div>
               <p className="font-extrabold">Jam Layanan</p>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{SITE.hours}</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{site.hours}</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
@@ -317,7 +288,7 @@ function Index() {
             <div>
               <p className="font-extrabold">Hubungi Admin</p>
               <a
-                href={waLink()}
+                href={waLink(site.waMessage, site.whatsapp)}
                 target="_blank"
                 rel="noreferrer"
                 className="mt-2 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary-deep"
@@ -331,4 +302,8 @@ function Index() {
       </section>
     </div>
   );
+}
+
+function IndexRouteComponent() {
+  return <HomePageView />;
 }

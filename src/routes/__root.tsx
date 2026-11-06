@@ -4,17 +4,21 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
+import { CMSProvider } from "@/lib/cms-context";
+import { AuthProvider } from "@/lib/auth-context";
 
 function NotFoundComponent() {
   return (
@@ -84,7 +88,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Jastip Anggun Jaya" },
       {
         name: "description",
-        content: "Layanan pengiriman paket & kendaraan ke Papua — Jakarta, Surabaya, Makassar → Manokwari.",
+        content:
+          "Layanan pengiriman paket & kendaraan ke Papua — Jakarta, Surabaya, Makassar → Manokwari.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -126,14 +131,21 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isAdmin = pathname.startsWith("/admin");
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SiteHeader />
-      <WhatsAppFloat />
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-      <SiteFooter />
+      <AuthProvider>
+        <CMSProvider>
+          <Toaster position="top-right" richColors />
+          {!isAdmin && <SiteHeader />}
+          {!isAdmin && <WhatsAppFloat />}
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+          {!isAdmin && <SiteFooter />}
+        </CMSProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

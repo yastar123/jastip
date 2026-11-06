@@ -12,11 +12,13 @@ import {
   FileSpreadsheet,
   Cloud,
 } from "lucide-react";
-import { findShipment, DEMO_SHIPMENTS, type Shipment } from "@/lib/tracking";
+import { type Shipment } from "@/lib/tracking";
 import { formatRupiah } from "@/lib/site";
+import { useCMS } from "@/lib/cms-context";
+import { type AppCMSData } from "@/lib/cms-types";
 
 export const Route = createFileRoute("/lacak")({
-  component: Lacak,
+  component: LacakRouteComponent,
   head: () => ({
     meta: [
       { title: "Lacak Paket — Jastip Anggun Jaya" },
@@ -43,7 +45,27 @@ const STAGE_META = {
   tiba: { label: "Siap Diambil", cls: "bg-accent text-accent-foreground", icon: PackageCheck },
 } as const;
 
-function Lacak() {
+export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
+  const { data } = useCMS();
+  const cms = previewData || data;
+  const shipments = cms.shipments || [];
+  const lcp = cms.lacakPage || {
+    headerBadge: "Lacak Paket",
+    headerTitle: "Cek posisi paket Anda di sini",
+    headerDescription:
+      "Masukkan nama dan nomor resi yang Anda terima saat titip paket. Pengecekan hanya bisa dilakukan dengan nama dan no resi — nomor HP tidak dapat digunakan.",
+    cardDisclaimer:
+      "Lacak paket hanya dengan nama + no resi. Hasil berupa data harga (ongkir) dan status paket — pembuatan/unduh invoice tidak tersedia untuk konsumen.",
+    demoBoxTitle: "Data Resi Terdaftar",
+    demoBoxDescription:
+      "Klik salah satu contoh di bawah untuk mencoba pelacakan. Data dikelola admin melalui Dashboard dan diperbarui secara real-time.",
+    invoiceNotice:
+      "Konsumen hanya dapat melihat data harga dan status paket. Untuk faktur/invoice silakan hubungi admin.",
+    emptyNoticeTitle: "Belum ada paket ditampilkan",
+    emptyNoticeText:
+      "Isi nama dan nomor resi pada formulir, lalu tekan Cek Status Paket. Riwayat perjalanan, status, dan ongkir akan tampil di sini.",
+  };
+
   const [resi, setResi] = useState("");
   const [name, setName] = useState("");
   const [result, setResult] = useState<Shipment | null>(null);
@@ -56,7 +78,14 @@ function Lacak() {
       setError("Nama dan nomor resi keduanya wajib diisi.");
       return;
     }
-    const found = findShipment(resi, name);
+
+    const r = resi.trim().toUpperCase();
+    const n = name.trim().toLowerCase();
+
+    const found = shipments.find(
+      (s) => s.resi.toUpperCase() === r && s.name.toLowerCase().includes(n),
+    );
+
     if (!found) {
       setResult(null);
       setError(
@@ -81,14 +110,12 @@ function Lacak() {
       <section className="relative overflow-hidden bg-gradient-red">
         <div className="absolute -right-20 -top-24 size-72 rounded-full bg-gold/15 blur-3xl" />
         <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-20">
-          <p className="text-sm font-bold uppercase tracking-widest text-gold">Lacak Paket</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-gold">{lcp.headerBadge}</p>
           <h1 className="mt-2 max-w-2xl text-3xl font-extrabold tracking-tight text-primary-foreground sm:text-5xl">
-            Cek posisi paket Anda di sini
+            {lcp.headerTitle}
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-primary-foreground/85 sm:text-base">
-            Masukkan <strong>nama</strong> dan <strong>nomor resi</strong> yang Anda
-            terima saat titip paket. Pengecekan hanya bisa dilakukan dengan nama dan
-            no resi — nomor HP tidak dapat digunakan.
+            {lcp.headerDescription}
           </p>
         </div>
       </section>
@@ -136,40 +163,41 @@ function Lacak() {
               )}
               <div className="mt-6 flex items-start gap-2.5 rounded-xl bg-accent/50 px-4 py-3.5 text-xs leading-relaxed text-accent-foreground">
                 <CircleCheck className="mt-0.5 size-4 shrink-0" />
-                <span>
-                  Lacak paket hanya dengan <strong>nama + no resi</strong>. Hasil
-                  berupa <strong>data harga (ongkir)</strong> dan{" "}
-                  <strong>status paket</strong> — pembuatan/unduh invoice tidak
-                  tersedia untuk konsumen.
-                </span>
+                <span>{lcp.cardDisclaimer}</span>
               </div>
             </form>
 
             <div className="rounded-3xl border border-border bg-card p-6 sm:p-7">
               <div className="flex items-center gap-2.5">
                 <Cloud className="size-4 text-gold-deep" />
-                <h3 className="text-sm font-extrabold">Coba Data Demo</h3>
+                <h3 className="text-sm font-extrabold">{lcp.demoBoxTitle}</h3>
               </div>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                Klik salah satu contoh di bawah untuk mencoba pelacakan. Data asli
-                dikelola admin dan diperbarui berkala.
+                {lcp.demoBoxDescription}
               </p>
-              <ul className="mt-4 space-y-2">
-                {DEMO_SHIPMENTS.map((demo) => (
-                  <li key={demo.resi}>
-                    <button
-                      type="button"
-                      onClick={() => fillDemo(demo)}
-                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-left transition-colors hover:border-gold/60 hover:bg-accent/40"
-                    >
-                      <span className="block text-xs font-extrabold uppercase tracking-wide text-primary">
-                        {demo.resi}
-                      </span>
-                      <span className="text-xs text-muted-foreground">{demo.name}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              {shipments.length === 0 ? (
+                <div className="mt-4 rounded-xl border border-dashed border-border bg-secondary/30 p-4 text-center text-xs text-muted-foreground">
+                  Belum ada resi pengiriman aktif. Admin dapat menambahkan data resi baru melalui
+                  Dashboard Admin.
+                </div>
+              ) : (
+                <ul className="mt-4 space-y-2">
+                  {shipments.slice(0, 5).map((demo) => (
+                    <li key={demo.resi}>
+                      <button
+                        type="button"
+                        onClick={() => fillDemo(demo)}
+                        className="w-full rounded-xl border border-border bg-background px-4 py-3 text-left transition-colors hover:border-gold/60 hover:bg-accent/40"
+                      >
+                        <span className="block text-xs font-extrabold uppercase tracking-wide text-primary">
+                          {demo.resi}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{demo.name}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
@@ -190,7 +218,7 @@ function Lacak() {
                     </p>
                   </div>
                   {(() => {
-                    const meta = STAGE_META[result.stage];
+                    const meta = STAGE_META[result.stage] || STAGE_META.diterima;
                     const Icon = meta.icon;
                     return (
                       <span
@@ -216,9 +244,7 @@ function Lacak() {
                     <p className="text-xs font-bold uppercase tracking-wider text-gold">
                       Data Harga (Ongkir)
                     </p>
-                    <p className="mt-1 text-2xl font-extrabold">
-                      {formatRupiah(result.price)}
-                    </p>
+                    <p className="mt-1 text-2xl font-extrabold">{formatRupiah(result.price)}</p>
                   </div>
                 </div>
 
@@ -257,10 +283,7 @@ function Lacak() {
 
                 <div className="flex flex-wrap items-center gap-3 border-t border-border bg-secondary/40 px-6 py-5 sm:px-8">
                   <FileSpreadsheet className="size-4 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">
-                    Konsumen hanya dapat melihat data harga dan status paket. Untuk
-                    faktur/invoice silakan hubungi admin.
-                  </p>
+                  <p className="text-xs text-muted-foreground">{lcp.invoiceNotice}</p>
                   <Link
                     to="/kontak"
                     className="ml-auto rounded-full border border-border px-4 py-2 text-xs font-bold transition-colors hover:bg-muted"
@@ -274,11 +297,9 @@ function Lacak() {
                 <span className="inline-flex size-16 items-center justify-center rounded-2xl bg-secondary text-primary">
                   <ScanBarcode className="size-8" />
                 </span>
-                <h2 className="mt-5 text-xl font-extrabold">Belum ada paket ditampilkan</h2>
+                <h2 className="mt-5 text-xl font-extrabold">{lcp.emptyNoticeTitle}</h2>
                 <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-                  Isi nama dan nomor resi pada formulir, lalu tekan{" "}
-                  <strong>Cek Status Paket</strong>. Riwayat perjalanan, status, dan
-                  ongkir akan tampil di sini.
+                  {lcp.emptyNoticeText}
                 </p>
               </div>
             )}
@@ -300,13 +321,15 @@ function Detail({
 }) {
   return (
     <div className="rounded-2xl border border-border bg-background px-5 py-4">
-      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-        {label}
-      </p>
+      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className="mt-1 flex items-center gap-2 text-sm font-extrabold">
         {Icon && <Icon className="size-4 text-gold-deep" />}
         {value}
       </p>
     </div>
   );
+}
+
+function LacakRouteComponent() {
+  return <LacakPageView />;
 }

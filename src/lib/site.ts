@@ -12,8 +12,9 @@ export const SITE = {
     "Halo Admin Jastip Anggun Jaya, saya ingin bertanya tentang layanan pengiriman paket ke Manokwari.",
 };
 
-export function waLink(message: string = SITE.waMessage): string {
-  return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(message)}`;
+export function waLink(message: string = SITE.waMessage, phone: string = SITE.whatsapp): string {
+  const cleanPhone = (phone || SITE.whatsapp).replace(/[^0-9]/g, "");
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message || SITE.waMessage)}`;
 }
 
 export function formatRupiah(value: number): string {

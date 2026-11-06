@@ -1,11 +1,15 @@
 import { MessageCircle } from "lucide-react";
 import { waLink } from "@/lib/site";
+import { useCMS } from "@/lib/cms-context";
 
-// Tombol mengambang "Hubungi Admin" via WhatsApp.
+// Tombol mengambang "Hubungi Admin" via WhatsApp dengan nomor dinamis dari CMS.
 export function WhatsAppFloat() {
+  const { data } = useCMS();
+  const site = data?.site;
+
   return (
     <a
-      href={waLink()}
+      href={waLink(site?.waMessage, site?.whatsapp)}
       target="_blank"
       rel="noreferrer"
       aria-label="Hubungi Admin via WhatsApp"

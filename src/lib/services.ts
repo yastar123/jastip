@@ -14,6 +14,7 @@ export type Service = {
   highlights: string[];
   tables: PricingTable[];
   notes: string[];
+  image?: string;
 };
 
 export const SERVICES: Service[] = [
@@ -26,7 +27,11 @@ export const SERVICES: Service[] = [
     tagline: "Tarif flat yang hemat untuk paket harian — semakin berat, tetap mudah dihitung.",
     startingFrom: 10000,
     options: ["1 Paket", "Grup Paket"],
-    highlights: ["Tarif flat Rp 10.000/kg", "Cocok untuk paket rutin", "Penghitungan sederhana & transparan"],
+    highlights: [
+      "Tarif flat Rp 10.000/kg",
+      "Cocok untuk paket rutin",
+      "Penghitungan sederhana & transparan",
+    ],
     tables: [
       {
         columns: ["Berat Paket", "Ongkir"],
@@ -49,7 +54,11 @@ export const SERVICES: Service[] = [
     tagline: "Lebih cepat lewat jalur udara — tarif bertingkat sesuai berat paket.",
     startingFrom: 15800,
     options: ["1 Paket", "Grup Paket"],
-    highlights: ["Jalur udara, lebih cepat", "Tarif bracket sesuai berat", "Cocok untuk dokumen & paket kecil"],
+    highlights: [
+      "Jalur udara, lebih cepat",
+      "Tarif bracket sesuai berat",
+      "Cocok untuk dokumen & paket kecil",
+    ],
     tables: [
       {
         columns: ["Berat Paket", "Ongkir"],
@@ -80,7 +89,11 @@ export const SERVICES: Service[] = [
     tagline: "Paling hemat untuk paket besar — kirim dalam volume besar tanpa minimum.",
     startingFrom: 7000,
     options: ["Tanpa minimum", "Barcode per paket"],
-    highlights: ["Hemat untuk paket besar", "Tanpa minimum volume", "Setiap paket cargo memiliki barcode sendiri"],
+    highlights: [
+      "Hemat untuk paket besar",
+      "Tanpa minimum volume",
+      "Setiap paket cargo memiliki barcode sendiri",
+    ],
     tables: [
       {
         columns: ["Berat Paket", "Ongkir"],
@@ -103,7 +116,11 @@ export const SERVICES: Service[] = [
     tagline: "Laut reguler tarif berjenjang — semakin banyak kilo, semakin murah per kilonya.",
     startingFrom: 15500,
     options: ["1 Paket", "Grup Paket"],
-    highlights: ["Tarif berjenjang per kg", "Semakin berat, tarif per kg turun", "Cocok kiriman rutin dalam jumlah banyak"],
+    highlights: [
+      "Tarif berjenjang per kg",
+      "Semakin berat, tarif per kg turun",
+      "Cocok kiriman rutin dalam jumlah banyak",
+    ],
     tables: [
       {
         title: "Jakarta → Manokwari",
