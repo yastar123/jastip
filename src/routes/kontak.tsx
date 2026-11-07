@@ -3,6 +3,7 @@ import { MapPin, Clock, PhoneCall, Cloud, Search } from "lucide-react";
 import { waLink } from "@/lib/site";
 import { useCMS } from "@/lib/cms-context";
 import { type AppCMSData } from "@/lib/cms-types";
+import { SITE_URL } from "@/lib/site";
 
 export const Route = createFileRoute("/kontak")({
   component: KontakRouteComponent,
@@ -21,8 +22,16 @@ export const Route = createFileRoute("/kontak")({
           "Hubungi admin Jastip Anggun Jaya — gudang di Jln. Merpati SP 4, Manokwari. Chat WhatsApp untuk tanya tarif & paket.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: `${SITE_URL}/kontak` },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Kontak — Jastip Anggun Jaya" },
+      {
+        name: "twitter:description",
+        content:
+          "Hubungi admin Jastip Anggun Jaya di Manokwari, Papua untuk informasi layanan dan pengiriman paket.",
+      },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/kontak` }],
   }),
 });
 

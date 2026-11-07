@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   SlidersHorizontal,
@@ -48,12 +49,17 @@ import { toast } from "sonner";
 import { ImageUploaderControl } from "@/components/admin/image-uploader-control";
 import { FloatingSaveBar, TabSaveFooter } from "@/components/admin/save-bars";
 import { MediaCMSPanel } from "@/components/admin/media-cms-panel";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { WhatsAppFloat } from "@/components/whatsapp-float";
+import appCss from "../styles.css?url";
 
 export const Route = createFileRoute("/admin")({
   component: AdminDashboard,
   head: () => ({
     meta: [
       { title: "Dashboard Admin — Jastip Anggun Jaya" },
+      { name: "robots", content: "noindex, nofollow" },
       {
         name: "description",
         content: "Kelola seluruh konten halaman publik, layanan, tarif, dan data resi paket.",
@@ -370,7 +376,11 @@ function AdminDashboard() {
                 setDevice={setPreviewDevice}
               />
               <div className="flex flex-1 items-center justify-center overflow-auto rounded-2xl border border-border bg-muted/40 p-4">
-                <PreviewFrame page={activePreviewPage} device={previewDevice} />
+                <PreviewFrame
+                  page={activePreviewPage}
+                  device={previewDevice}
+                  setPage={setActivePreviewPage}
+                />
               </div>
             </div>
           )}
@@ -386,7 +396,11 @@ function AdminDashboard() {
               setDevice={setPreviewDevice}
             />
             <div className="flex flex-1 items-center justify-center overflow-auto p-4">
-              <PreviewFrame page={activePreviewPage} device={previewDevice} />
+              <PreviewFrame
+                page={activePreviewPage}
+                device={previewDevice}
+                setPage={setActivePreviewPage}
+              />
             </div>
           </div>
         )}
@@ -481,34 +495,103 @@ function PreviewToolbar({
   );
 }
 
-function PreviewFrame({ page, device }: { page: string; device: "desktop" | "tablet" | "mobile" }) {
+function PreviewFrame({
+  page,
+  device,
+  setPage,
+}: {
+  page: string;
+  device: "desktop" | "tablet" | "mobile";
+  setPage: (page: string) => void;
+}) {
   const { draftData } = useCMS();
+  const areaRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  const [areaSize, setAreaSize] = useState({ width: 0, height: 0 });
 
-  const widthStyle =
+  useEffect(() => {
+    const area = areaRef.current;
+    if (!area) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) {
+        setAreaSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+    observer.observe(area);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const document = iframeRef.current?.contentDocument;
+    if (!document) return;
+    const handlePreviewNavigation = (event: MouseEvent) => {
+      const target = event.target;
+      const ElementConstructor = document.defaultView?.Element;
+      if (!ElementConstructor || !(target instanceof ElementConstructor)) return;
+      const anchor = target.closest("a");
+      if (!anchor || anchor.origin !== window.location.origin) return;
+      const nextPage = `${anchor.pathname}${anchor.hash}`;
+      if (!["/", "/layanan", "/lacak", "/kontak"].includes(anchor.pathname)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setPage(nextPage);
+    };
+    document.addEventListener("click", handlePreviewNavigation, true);
+    return () => document.removeEventListener("click", handlePreviewNavigation, true);
+  }, [portalTarget, setPage]);
+
+  const viewport =
     device === "mobile"
-      ? "w-[375px] max-w-full"
+      ? { width: 390, height: 844 }
       : device === "tablet"
-        ? "w-[768px] max-w-full"
-        : "w-full";
+        ? { width: 768, height: 1024 }
+        : { width: Math.max(areaSize.width, 1), height: Math.max(areaSize.height, 1) };
+  const scale =
+    device === "desktop" || !areaSize.width ? 1 : Math.min(1, areaSize.width / viewport.width);
+  const iframeDocument = `<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"><link rel="stylesheet" href="${appCss}"><style>html,body,#preview-root{margin:0;min-height:100%;}body{overflow-x:hidden}</style></head><body><div id="preview-root"></div></body></html>`;
 
   return (
-    <div
-      className={
-        "h-full overflow-y-auto rounded-xl border border-border bg-background shadow-2xl transition-all duration-300 " +
-        widthStyle
-      }
-    >
-      <div className="sticky top-0 z-10 flex h-7 items-center justify-between border-b border-border bg-muted/80 px-3 text-[11px] text-muted-foreground backdrop-blur-sm">
-        <span className="font-mono">https://jastipanggunjaya.com{page}</span>
-        <span className="rounded bg-background px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
-          Live Render
-        </span>
-      </div>
-      <div>
-        {page === "/" && <HomePageView previewData={draftData} />}
-        {page === "/layanan" && <LayananPageView previewData={draftData} />}
-        {page === "/lacak" && <LacakPageView previewData={draftData} />}
-        {page === "/kontak" && <KontakPageView previewData={draftData} />}
+    <div ref={areaRef} className="size-full min-h-0 overflow-auto">
+      <div
+        className="relative mx-auto"
+        style={{
+          width: `${viewport.width * scale}px`,
+          height: `${viewport.height * scale}px`,
+        }}
+      >
+        <iframe
+          ref={iframeRef}
+          title={`Pratinjau halaman ${page}`}
+          srcDoc={iframeDocument}
+          onLoad={() => {
+            setPortalTarget(
+              iframeRef.current?.contentDocument?.getElementById("preview-root") ?? null,
+            );
+          }}
+          className="origin-top-left rounded-xl border border-border bg-background shadow-2xl"
+          style={{
+            width: `${viewport.width}px`,
+            height: `${viewport.height}px`,
+            transform: `scale(${scale})`,
+          }}
+        />
+        {portalTarget &&
+          createPortal(
+            <div className="min-h-full bg-background text-foreground">
+              <SiteHeader previewPath={page.split("#")[0]} previewData={draftData} />
+              {page.startsWith("/layanan") && <LayananPageView previewData={draftData} />}
+              {page.startsWith("/lacak") && <LacakPageView previewData={draftData} />}
+              {page.startsWith("/kontak") && <KontakPageView previewData={draftData} />}
+              {page === "/" && <HomePageView previewData={draftData} />}
+              <SiteFooter previewData={draftData} />
+              <WhatsAppFloat previewData={draftData} />
+            </div>,
+            portalTarget,
+          )}
       </div>
     </div>
   );

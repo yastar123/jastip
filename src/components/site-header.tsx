@@ -3,6 +3,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, X, PhoneCall } from "lucide-react";
 import { getSiteLogoUrl, waLink } from "@/lib/site";
 import { useCMS } from "@/lib/cms-context";
+import { type AppCMSData } from "@/lib/cms-types";
 
 const NAV = [
   { to: "/", label: "Beranda" },
@@ -11,11 +12,15 @@ const NAV = [
   { to: "/kontak", label: "Kontak" },
 ] as const;
 
-export function SiteHeader() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+export function SiteHeader({
+  previewPath,
+  previewData,
+}: { previewPath?: string; previewData?: AppCMSData } = {}) {
+  const routePathname = useRouterState({ select: (s) => s.location.pathname });
+  const pathname = previewPath ?? routePathname;
   const [open, setOpen] = useState(false);
   const { data } = useCMS();
-  const site = data?.site;
+  const site = (previewData || data)?.site;
 
   const isActive = (to: string) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
 

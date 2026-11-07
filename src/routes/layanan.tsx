@@ -3,6 +3,7 @@ import { Boxes, Package, Plane, Ship, Info, PhoneCall, Search, BadgeCheck } from
 import { waLink, formatRupiah } from "@/lib/site";
 import { useCMS } from "@/lib/cms-context";
 import { type AppCMSData } from "@/lib/cms-types";
+import { SITE_URL } from "@/lib/site";
 
 export const Route = createFileRoute("/layanan")({
   component: LayananRouteComponent,
@@ -21,8 +22,16 @@ export const Route = createFileRoute("/layanan")({
           "Jastip Hemat, Pesawat, Kargo & Pelni — daftar tarif lengkap dari Jakarta, Surabaya, dan Makassar ke Manokwari.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: `${SITE_URL}/layanan` },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Layanan & Tarif — Jastip Anggun Jaya" },
+      {
+        name: "twitter:description",
+        content:
+          "Jastip Hemat, Pesawat, Kargo & Pelni — daftar tarif lengkap dari Jakarta, Surabaya, dan Makassar ke Manokwari.",
+      },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/layanan` }],
   }),
 });
 
@@ -92,6 +101,31 @@ export function LayananPageView({ previewData }: { previewData?: AppCMSData }) {
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            name: "Layanan dan Tarif Jastip Anggun Jaya",
+            itemListElement: services.map((service, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              item: {
+                "@type": "Service",
+                name: service.name,
+                description: service.tagline,
+                areaServed: service.route,
+                provider: {
+                  "@type": "Organization",
+                  name: cms.site.name,
+                  url: SITE_URL,
+                },
+              },
+            })),
+          }).replace(/</g, "\\u003c"),
+        }}
+      />
       {/* Header halaman */}
       <section className="relative overflow-hidden bg-gradient-red">
         <div className="absolute -right-20 -top-24 size-72 rounded-full bg-gold/15 blur-3xl" />

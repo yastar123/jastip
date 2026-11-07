@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import heroImg from "@/assets/hero.jpg";
 import portImg from "@/assets/port.jpg";
-import { waLink, formatRupiah } from "@/lib/site";
+import { waLink, formatRupiah, SITE_URL, getSiteLogoUrl } from "@/lib/site";
 import { useCMS } from "@/lib/cms-context";
 import { type AppCMSData } from "@/lib/cms-types";
 
@@ -38,8 +38,16 @@ export const Route = createFileRoute("/")({
           "Jastip Hemat, Pesawat, Kargo & Pelni — Jakarta, Surabaya, Makassar → Manokwari. Lacak paket Anda langsung dari website.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: SITE_URL },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Jastip Anggun Jaya — Pengiriman Paket ke Papua" },
+      {
+        name: "twitter:description",
+        content:
+          "Jastip Hemat, Pesawat, Kargo & Pelni dari Jakarta, Surabaya, dan Makassar ke Manokwari.",
+      },
     ],
+    links: [{ rel: "canonical", href: SITE_URL }],
   }),
 });
 
@@ -58,9 +66,37 @@ export function HomePageView({ previewData }: { previewData?: AppCMSData }) {
   const site = cms.site;
   const home = cms.home;
   const services = cms.services;
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${SITE_URL}/#organization`,
+        name: site.name,
+        url: SITE_URL,
+        logo: new URL(getSiteLogoUrl(site.logoUrl), SITE_URL).toString(),
+        description: site.tagline,
+        areaServed: ["Manokwari", "Papua Barat", "Indonesia"],
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        name: site.name,
+        url: SITE_URL,
+        inLanguage: "id-ID",
+        publisher: { "@id": `${SITE_URL}/#organization` },
+      },
+    ],
+  };
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+        }}
+      />
       {/* HERO */}
       <section className="relative overflow-hidden">
         <img

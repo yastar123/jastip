@@ -1,5 +1,6 @@
 // Informasi utama usaha — ubah di sini jika ada perubahan data.
 export const SITE_LOGO_URL = "/logo.png";
+export const SITE_URL = "https://jastipanggun.com";
 
 export function getSiteLogoUrl(logoUrl?: string): string {
   return !logoUrl || logoUrl.startsWith("/__l5e/assets-v1/") ? SITE_LOGO_URL : logoUrl;

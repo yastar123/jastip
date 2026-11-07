@@ -2,10 +2,11 @@ import { Link } from "@tanstack/react-router";
 import { MapPin, Clock, PhoneCall } from "lucide-react";
 import { getSiteLogoUrl, waLink } from "@/lib/site";
 import { useCMS } from "@/lib/cms-context";
+import { type AppCMSData } from "@/lib/cms-types";
 
-export function SiteFooter() {
+export function SiteFooter({ previewData }: { previewData?: AppCMSData } = {}) {
   const { data } = useCMS();
-  const site = data?.site;
+  const site = (previewData || data)?.site;
 
   return (
     <footer className="bg-gradient-red text-primary-foreground">

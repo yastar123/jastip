@@ -1,11 +1,12 @@
 import { MessageCircle } from "lucide-react";
 import { waLink } from "@/lib/site";
 import { useCMS } from "@/lib/cms-context";
+import { type AppCMSData } from "@/lib/cms-types";
 
 // Tombol mengambang "Hubungi Admin" via WhatsApp dengan nomor dinamis dari CMS.
-export function WhatsAppFloat() {
+export function WhatsAppFloat({ previewData }: { previewData?: AppCMSData } = {}) {
   const { data } = useCMS();
-  const site = data?.site;
+  const site = (previewData || data)?.site;
 
   return (
     <a

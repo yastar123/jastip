@@ -4,6 +4,7 @@ import { Search, ScanBarcode, CircleAlert, CircleCheck, LoaderCircle } from "luc
 import { type PublicTrackingResult } from "@/lib/tracking";
 import { useCMS } from "@/lib/cms-context";
 import { type AppCMSData } from "@/lib/cms-types";
+import { SITE_URL } from "@/lib/site";
 
 export const Route = createFileRoute("/lacak")({
   component: LacakRouteComponent,
@@ -21,8 +22,15 @@ export const Route = createFileRoute("/lacak")({
         content: "Masukkan nomor resi untuk melihat status dan detail paket Anda.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: `${SITE_URL}/lacak` },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Lacak Paket — Jastip Anggun Jaya" },
+      {
+        name: "twitter:description",
+        content: "Cek status dan detail paket Jastip Anggun Jaya menggunakan nomor resi.",
+      },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/lacak` }],
   }),
 });
 
