@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Clock, PhoneCall, SlidersHorizontal } from "lucide-react";
+import { MapPin, Clock, PhoneCall } from "lucide-react";
 import { getSiteLogoUrl, waLink } from "@/lib/site";
 import { useCMS } from "@/lib/cms-context";
 
@@ -50,15 +50,6 @@ export function SiteFooter() {
             <li>
               <Link to="/kontak" className="transition-colors hover:text-gold">
                 Kontak
-              </Link>
-            </li>
-            <li className="pt-2">
-              <Link
-                to="/admin"
-                className="inline-flex items-center gap-1.5 font-bold text-gold transition-colors hover:underline"
-              >
-                <SlidersHorizontal className="size-3.5" />
-                CMS Admin Dashboard
               </Link>
             </li>
           </ul>

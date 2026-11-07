@@ -122,6 +122,19 @@ type PublicPackageQuery = (
   values: (string | null)[],
 ) => Promise<{ rows: PublicPackageRow[] }>;
 
+export function resolveServiceRoute(
+  serviceType: string | null,
+  services: readonly Pick<AppCMSData["services"][number], "name" | "route">[],
+): string | null {
+  if (!serviceType) return null;
+
+  const normalize = (value: string) => value.trim().toLowerCase().replace(/\+$/, "").trim();
+  const normalizedServiceType = normalize(serviceType);
+  return (
+    services.find((service) => normalize(service.name) === normalizedServiceType)?.route ?? null
+  );
+}
+
 export async function findPublicPackage(
   name: string | undefined,
   resi: string,
@@ -232,13 +245,18 @@ export async function findPublicPackage(
     : row.all_verified
       ? "Paket tiba di gudang"
       : "Paket dalam proses pengiriman";
+  const route =
+    row.route ??
+    (row.service_type
+      ? resolveServiceRoute(row.service_type, (await getCMSData()).services)
+      : null);
 
   return {
     resi: row.resi,
     packageNumber: row.package_number,
     packageDate: row.package_date,
     serviceType: row.service_type,
-    route: row.route,
+    route,
     realWeight: row.real_weight,
     volumeWeight: row.volume_weight,
     billableWeight: row.billable_weight,

@@ -1,7 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
-import { findPublicPackage } from "@/server/db";
+import { findPublicPackage, resolveServiceRoute } from "@/server/db";
 
 describe("public package tracking", () => {
+  it("uses the matching CMS service route when a package has no route", () => {
+    const services = [
+      { name: "Jastip Hemat", route: "Surabaya → Manokwari" },
+      { name: "Jastip Pesawat", route: "Jakarta → Manokwari" },
+    ];
+
+    expect(resolveServiceRoute("jastip hemat+", services)).toBe("Surabaya → Manokwari");
+    expect(resolveServiceRoute("Jastip lain", services)).toBeNull();
+    expect(resolveServiceRoute(null, services)).toBeNull();
+  });
+
   it("matches the full name and resi and returns package details without financial fields", async () => {
     const query = vi.fn(async () => ({
       rows: [

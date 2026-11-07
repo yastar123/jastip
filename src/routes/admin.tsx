@@ -2358,14 +2358,6 @@ function AdminLoginView() {
             </button>
           </form>
         </div>
-
-        {/* Bottom Helper */}
-        <div className="border-t border-border pt-4 text-xs text-muted-foreground">
-          <p>
-            Kredensial disimpan pada file{" "}
-            <code className="font-mono text-foreground font-bold">.env</code> server.
-          </p>
-        </div>
       </div>
     </div>
   );
