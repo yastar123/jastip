@@ -16,6 +16,8 @@ import {
   Trash2,
   CheckCircle2,
   Database,
+  PanelLeftClose,
+  PanelLeftOpen,
   ArrowRight,
   Eye,
   EyeOff,
@@ -83,6 +85,7 @@ function AdminDashboard() {
 
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [showLivePreview, setShowLivePreview] = useState<boolean>(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const handleSave = useCallback(async () => {
     const success = await saveChanges();
@@ -132,8 +135,8 @@ function AdminDashboard() {
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
       {/* TOP HEADER */}
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4 sm:px-6">
-        <div className="flex items-center gap-3">
+      <header className="flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-card px-4 py-2 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-red text-primary-foreground shadow-sm">
             <SlidersHorizontal className="size-5" />
           </div>
@@ -149,10 +152,13 @@ function AdminDashboard() {
         </div>
 
         {/* Database & Actions */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2.5 sm:gap-3">
           {/* DB Indicator */}
           <div
-            className="hidden items-center gap-1.5 rounded-full border border-border bg-muted/60 px-3 py-1 text-xs font-semibold sm:flex"
+            className="hidden items-center rounded-full border border-border bg-muted/60 p-2 sm:flex"
+            aria-label={
+              dbStatus?.isPostgresConnected ? "PostgreSQL terhubung" : "Storage lokal aktif"
+            }
             title={
               dbStatus?.isPostgresConnected
                 ? "Terhubung ke Database PostgreSQL"
@@ -165,9 +171,6 @@ function AdminDashboard() {
                 (dbStatus?.isPostgresConnected ? "text-emerald-500" : "text-amber-500")
               }
             />
-            <span className="text-[11px]">
-              {dbStatus?.isPostgresConnected ? "PostgreSQL Aktif" : "Storage Aktif"}
-            </span>
           </div>
 
           {/* Unsaved indicator */}
@@ -249,12 +252,40 @@ function AdminDashboard() {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {/* SIDEBAR NAVIGATION */}
-        <aside className="w-16 shrink-0 border-r border-border bg-card/60 sm:w-64">
+        <aside
+          className={
+            "shrink-0 overflow-y-auto border-r border-border bg-card/60 transition-[width] duration-200 " +
+            (isSidebarCollapsed ? "w-16" : "w-16 sm:w-64")
+          }
+        >
           <div className="p-3">
-            <div className="mb-2 hidden px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground sm:block">
-              Halaman Public
+            <div
+              className={
+                "mb-2 flex items-center " +
+                (isSidebarCollapsed ? "justify-center" : "justify-between")
+              }
+            >
+              {!isSidebarCollapsed && (
+                <span className="hidden px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground sm:inline">
+                  Halaman Public
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label={isSidebarCollapsed ? "Buka sidebar" : "Ciutkan sidebar"}
+                aria-expanded={!isSidebarCollapsed}
+                title={isSidebarCollapsed ? "Buka sidebar" : "Ciutkan sidebar"}
+              >
+                {isSidebarCollapsed ? (
+                  <PanelLeftOpen className="size-4" />
+                ) : (
+                  <PanelLeftClose className="size-4" />
+                )}
+              </button>
             </div>
             <nav className="space-y-1">
               {[
@@ -283,13 +314,16 @@ function AdminDashboard() {
                     }}
                     className={
                       "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-bold transition-colors sm:text-sm " +
+                      (isSidebarCollapsed ? "justify-center " : "") +
                       (active
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground")
                     }
+                    aria-label={item.label}
+                    title={isSidebarCollapsed ? item.label : undefined}
                   >
                     <Icon className="size-4 shrink-0" />
-                    <span className="hidden sm:inline">{item.label}</span>
+                    {!isSidebarCollapsed && <span className="hidden sm:inline">{item.label}</span>}
                   </button>
                 );
               })}
@@ -300,7 +334,7 @@ function AdminDashboard() {
         {/* CMS FORM PANELS (LEFT OR FULL) */}
         <div
           className={
-            "flex-1 overflow-y-auto p-4 sm:p-6 " +
+            "min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 " +
             (showLivePreview && activeTab !== "preview" ? "lg:w-1/2 lg:flex-none" : "w-full")
           }
         >
@@ -344,7 +378,7 @@ function AdminDashboard() {
 
         {/* SPLIT LIVE PREVIEW (RIGHT SIDE) */}
         {showLivePreview && activeTab !== "preview" && (
-          <div className="hidden flex-1 flex-col border-l border-border bg-muted/30 lg:flex">
+          <div className="hidden min-w-0 flex-1 flex-col border-l border-border bg-muted/30 lg:flex">
             <PreviewToolbar
               activePage={activePreviewPage}
               setActivePage={setActivePreviewPage}
