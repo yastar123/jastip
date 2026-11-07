@@ -45,7 +45,7 @@ server-only `.env` file. Do not commit `.env`:
   dedicated read-only account with access to the internal packages database
   (currently `JASTIPNEW`).
 - `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `SESSION_SECRET` are required for admin
-  login. Use a unique password of at least 24 characters and a random
+  login. Use a unique password of at least 10 characters and a random
   `SESSION_SECRET` of at least 32 characters (for example, generate one with
   `openssl rand -base64 48`).
 - `DATABASE_URL` is optional and is only for the separate website CMS database

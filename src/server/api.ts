@@ -63,7 +63,7 @@ function getAuthSettings(): AuthSettings | null {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD?.trim();
   const sessionSecret = process.env.SESSION_SECRET;
-  if (!email || !password || password.length < 24 || !sessionSecret || sessionSecret.length < 32) {
+  if (!email || !password || password.length < 10 || !sessionSecret || sessionSecret.length < 32) {
     return null;
   }
   return { email, password, sessionSecret };
@@ -142,7 +142,7 @@ app.post("/api/auth/login", (req: ExpRequest, res: ExpResponse) => {
     return res.status(503).json({
       success: false,
       error:
-        "Login admin belum dikonfigurasi. Periksa ADMIN_EMAIL, ADMIN_PASSWORD (minimal 24 karakter), dan SESSION_SECRET (minimal 32 karakter).",
+        "Login admin belum dikonfigurasi. Periksa ADMIN_EMAIL, ADMIN_PASSWORD (minimal 10 karakter), dan SESSION_SECRET (minimal 32 karakter).",
     });
   }
 
@@ -391,7 +391,7 @@ export async function handleFetchApi(request: Request): Promise<Response | null>
           JSON.stringify({
             success: false,
             error:
-              "Login admin belum dikonfigurasi. Periksa ADMIN_EMAIL, ADMIN_PASSWORD (minimal 24 karakter), dan SESSION_SECRET (minimal 32 karakter).",
+              "Login admin belum dikonfigurasi. Periksa ADMIN_EMAIL, ADMIN_PASSWORD (minimal 10 karakter), dan SESSION_SECRET (minimal 32 karakter).",
           }),
           { status: 503, headers: { "content-type": "application/json" } },
         );
