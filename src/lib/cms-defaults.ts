@@ -92,7 +92,7 @@ export const DEFAULT_CMS_DATA: AppCMSData = {
     headerDescription:
       "Cari seluruh paket berdasarkan nama konsumen, atau cek detail satu paket menggunakan nomor resi.",
     cardDisclaimer:
-      "Pilih pencarian berdasarkan nama atau nomor resi. Detail ongkir dan berat ditampilkan setelah paket tiba di Manokwari.",
+      "Cari Nama menampilkan ringkasan semua paket yang cocok. Pilih Cari Resi untuk melihat nama, berat, ongkir, dan status pengambilan setelah paket tiba di Manokwari.",
     demoBoxTitle: "Pelacakan Paket",
     demoBoxDescription: "Masukkan nama konsumen atau nomor resi untuk melihat status paket.",
     invoiceNotice: "Status pengambilan diperbarui oleh admin gudang Manokwari.",

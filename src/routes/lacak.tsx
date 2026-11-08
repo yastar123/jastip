@@ -58,7 +58,7 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
     headerDescription:
       "Cari semua paket berdasarkan nama konsumen, atau cek detail satu paket menggunakan nomor resi.",
     cardDisclaimer:
-      "Pilih pencarian berdasarkan nama atau nomor resi. Detail biaya hanya ditampilkan untuk paket yang sudah tiba di Manokwari.",
+      "Cari Nama menampilkan ringkasan semua paket yang cocok. Pilih Cari Resi untuk melihat nama, berat, ongkir, dan status pengambilan setelah paket tiba di Manokwari.",
     demoBoxTitle: "Data Resi Terdaftar",
     demoBoxDescription: "Masukkan nama lengkap atau nomor resi untuk melihat status paket.",
     invoiceNotice: "Status pengambilan diperbarui oleh admin gudang Manokwari.",
@@ -215,8 +215,9 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
               <div className="mt-6 flex items-start gap-2.5 rounded-xl bg-accent/50 px-4 py-3.5 text-xs leading-relaxed text-accent-foreground">
                 <CircleCheck className="mt-0.5 size-4 shrink-0" />
                 <span>
-                  Pencarian nama menampilkan status seluruh paket yang cocok. Detail ongkir dan
-                  berat ditampilkan saat paket sudah tiba di Manokwari.
+                  Cari Nama menampilkan ringkasan semua paket yang cocok. Pilih Cari Resi untuk
+                  melihat nama, berat, ongkir, dan status pengambilan setelah paket tiba di
+                  Manokwari.
                 </span>
               </div>
             </form>

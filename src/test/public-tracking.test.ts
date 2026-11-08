@@ -120,14 +120,33 @@ describe("public package tracking", () => {
     });
   });
 
-  it("marks arrived packages as picked up when pickup is complete", async () => {
+  it("treats a picked-up package as arrived even if verification status is stale", async () => {
     const query = vi.fn(async () => ({
-      rows: [makeRow({ all_picked_up: true })],
+      rows: [
+        makeRow({
+          all_picked_up: true,
+          arrived_at_destination: false,
+          last_location: "Jakarta",
+        }),
+      ],
     }));
 
-    await expect(findPublicPackageByResi("JAJ-001", query)).resolves.toMatchObject({
+    const result = await findPublicPackageByResi("JAJ-001", query);
+
+    expect(query.mock.calls[0]?.[0]).toContain(
+      "BOOL_AND(arrived_at_destination OR picked_up) AS arrived_at_destination",
+    );
+    expect(query.mock.calls[0]?.[0]).toContain(
+      "WHEN BOOL_AND(arrived_at_destination OR picked_up) AND COUNT(total_shipping) > 0",
+    );
+    expect(result).toMatchObject({
+      customerName: "Anya Putri",
+      totalShipping: "38500",
+      realWeight: "0.5",
+      arrivedAtDestination: true,
       pickedUp: true,
       status: "Sudah Diambil",
+      lastLocation: "Manokwari",
     });
   });
 

@@ -274,9 +274,9 @@ async function queryPublicPackages(
        CASE WHEN COUNT(volume_weight) = 0 THEN NULL ELSE SUM(volume_weight)::text END AS volume_weight,
        CASE WHEN COUNT(billable_weight) = 0 THEN NULL ELSE SUM(billable_weight)::text END AS billable_weight,
        BOOL_AND(picked_up) AS all_picked_up,
-       BOOL_AND(arrived_at_destination) AS arrived_at_destination,
+       BOOL_AND(arrived_at_destination OR picked_up) AS arrived_at_destination,
        CASE
-         WHEN BOOL_AND(arrived_at_destination) AND COUNT(total_shipping) > 0
+         WHEN BOOL_AND(arrived_at_destination OR picked_up) AND COUNT(total_shipping) > 0
          THEN SUM(total_shipping)::text
          ELSE NULL
        END AS total_shipping
@@ -292,9 +292,10 @@ async function mapPublicPackage(
   row: PublicPackageRow,
   includeDetails: boolean,
 ): Promise<PublicTrackingResult> {
+  const arrivedAtDestination = row.arrived_at_destination || row.all_picked_up;
   const status = row.all_picked_up
     ? "Sudah Diambil"
-    : row.arrived_at_destination
+    : arrivedAtDestination
       ? "Siap Diambil"
       : "Dalam Perjalanan";
   const route =
@@ -305,20 +306,20 @@ async function mapPublicPackage(
 
   return {
     resi: row.resi,
-    customerName: includeDetails && row.arrived_at_destination ? row.customer_name : null,
+    customerName: includeDetails && arrivedAtDestination ? row.customer_name : null,
     packageNumber: row.package_number,
     packageDate: row.package_date,
     lastUpdated: row.last_updated,
     serviceType: row.service_type,
     route,
-    lastLocation: row.arrived_at_destination
+    lastLocation: arrivedAtDestination
       ? "Manokwari"
       : row.last_location || "Dalam Perjalanan ke Manokwari",
-    realWeight: includeDetails && row.arrived_at_destination ? row.real_weight : null,
-    volumeWeight: includeDetails && row.arrived_at_destination ? row.volume_weight : null,
-    billableWeight: includeDetails && row.arrived_at_destination ? row.billable_weight : null,
-    totalShipping: includeDetails && row.arrived_at_destination ? row.total_shipping : null,
-    arrivedAtDestination: row.arrived_at_destination,
+    realWeight: includeDetails && arrivedAtDestination ? row.real_weight : null,
+    volumeWeight: includeDetails && arrivedAtDestination ? row.volume_weight : null,
+    billableWeight: includeDetails && arrivedAtDestination ? row.billable_weight : null,
+    totalShipping: includeDetails && arrivedAtDestination ? row.total_shipping : null,
+    arrivedAtDestination,
     pickedUp: row.all_picked_up,
     status,
   };
