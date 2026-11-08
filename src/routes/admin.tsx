@@ -1483,7 +1483,7 @@ function LacakPageCMSPanel({ onSave }: { onSave?: () => void }) {
     headerDescription:
       "Cari seluruh paket berdasarkan nama konsumen, atau cek detail satu paket menggunakan nomor resi.",
     cardDisclaimer:
-      "Cari Nama menampilkan ringkasan semua paket yang cocok. Pilih Cari Resi untuk melihat nama, berat, ongkir, dan status pengambilan setelah paket tiba di Manokwari.",
+      "Cari Nama menampilkan semua paket yang cocok. Paket yang sudah tiba menampilkan nama, berat, ongkir, dan status pengambilan.",
     demoBoxTitle: "Data Resi Terdaftar",
     demoBoxDescription: "Masukkan nama konsumen atau nomor resi untuk melihat status paket.",
     invoiceNotice: "Status pengambilan diperbarui oleh admin gudang Manokwari.",

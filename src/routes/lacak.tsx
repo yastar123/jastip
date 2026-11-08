@@ -58,7 +58,7 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
     headerDescription:
       "Cari semua paket berdasarkan nama konsumen, atau cek detail satu paket menggunakan nomor resi.",
     cardDisclaimer:
-      "Cari Nama menampilkan ringkasan semua paket yang cocok. Pilih Cari Resi untuk melihat nama, berat, ongkir, dan status pengambilan setelah paket tiba di Manokwari.",
+      "Cari Nama menampilkan semua paket yang cocok. Paket yang sudah tiba menampilkan nama, berat, ongkir, dan status pengambilan.",
     demoBoxTitle: "Data Resi Terdaftar",
     demoBoxDescription: "Masukkan nama lengkap atau nomor resi untuk melihat status paket.",
     invoiceNotice: "Status pengambilan diperbarui oleh admin gudang Manokwari.",
@@ -215,9 +215,8 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
               <div className="mt-6 flex items-start gap-2.5 rounded-xl bg-accent/50 px-4 py-3.5 text-xs leading-relaxed text-accent-foreground">
                 <CircleCheck className="mt-0.5 size-4 shrink-0" />
                 <span>
-                  Cari Nama menampilkan ringkasan semua paket yang cocok. Pilih Cari Resi untuk
-                  melihat nama, berat, ongkir, dan status pengambilan setelah paket tiba di
-                  Manokwari.
+                  Cari Nama menampilkan semua paket yang cocok. Paket yang sudah tiba menampilkan
+                  nama, berat, ongkir, dan status pengambilan.
                 </span>
               </div>
             </form>
@@ -261,22 +260,23 @@ function NameSearchResults({ results }: { results: PublicTrackingResult[] }) {
       {results.map((result) => (
         <article
           key={`${result.resi}-${result.packageNumber ?? ""}`}
-          className="rounded-3xl border border-border bg-card p-5 shadow-elegant sm:p-6"
+          className="rounded-3xl border border-border bg-card shadow-elegant"
         >
-          <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border bg-secondary/50 px-5 py-5 sm:px-7">
             <div>
               <h3 className="text-lg font-extrabold">{result.serviceType || "Paket"}</h3>
               <p className="mt-1 font-mono text-sm text-muted-foreground">{result.resi}</p>
             </div>
             <StatusBadge result={result} />
           </div>
-          <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-            <SummaryItem icon={MapPin} label="Lokasi terakhir" value={result.lastLocation || "-"} />
-            <SummaryItem
-              icon={CalendarDays}
-              label="Tanggal update"
-              value={formatPackageDate(result.lastUpdated || result.packageDate)}
-            />
+          <div className="space-y-4 px-5 py-5 sm:px-7">
+            <PackageTrackingSummary result={result} />
+            {result.arrivedAtDestination ? (
+              <PackageDetailList result={result} />
+            ) : (
+              <TransitNotice />
+            )}
+            <ContactAdminLink />
           </div>
         </article>
       ))}
@@ -296,52 +296,70 @@ function ResiSearchResult({ result }: { result: PublicTrackingResult }) {
       </div>
 
       <div className="space-y-4 px-5 py-5 sm:px-7">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SummaryItem
-            icon={MapPin}
-            label="Lokasi terakhir"
-            value={result.lastLocation || "Dalam Perjalanan ke Manokwari"}
-          />
-          <SummaryItem
-            icon={CalendarDays}
-            label="Tanggal update"
-            value={formatPackageDate(result.lastUpdated || result.packageDate)}
-          />
-        </div>
-
-        {result.arrivedAtDestination ? (
-          <div className="divide-y divide-border border-y border-border">
-            <Detail icon={UserRound} label="Nama" value={result.customerName || "-"} />
-            <Detail icon={PackageCheck} label="Jenis Jastip" value={result.serviceType || "-"} />
-            <Detail
-              icon={Weight}
-              label="Berat / Volume"
-              value={`${formatWeight(result.realWeight)} / ${formatWeight(result.volumeWeight)}`}
-            />
-            <Detail icon={Wallet} label="Ongkir" value={formatRupiah(result.totalShipping)} />
-            <Detail
-              icon={CircleCheck}
-              label="Pengambilan"
-              value={result.pickedUp ? "Sudah Diambil" : "Belum Diambil"}
-            />
-          </div>
-        ) : (
-          <div className="rounded-2xl bg-accent/50 px-4 py-4 text-sm leading-relaxed text-accent-foreground">
-            Paket masih dalam proses perjalanan menuju Manokwari. Detail berat dan ongkir akan
-            ditampilkan setelah paket tiba dan diverifikasi di gudang Manokwari.
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            to="/kontak"
-            className="ml-auto rounded-full border border-border px-4 py-2 text-xs font-bold transition-colors hover:bg-muted"
-          >
-            Hubungi Admin
-          </Link>
-        </div>
+        <PackageTrackingSummary result={result} />
+        {result.arrivedAtDestination ? <PackageDetailList result={result} /> : <TransitNotice />}
+        <ContactAdminLink />
       </div>
     </article>
+  );
+}
+
+function PackageTrackingSummary({ result }: { result: PublicTrackingResult }) {
+  return (
+    <div className="grid gap-3 text-sm sm:grid-cols-2">
+      <SummaryItem
+        icon={MapPin}
+        label="Lokasi terakhir"
+        value={result.lastLocation || "Dalam Perjalanan ke Manokwari"}
+      />
+      <SummaryItem
+        icon={CalendarDays}
+        label="Tanggal update"
+        value={formatPackageDate(result.lastUpdated || result.packageDate)}
+      />
+    </div>
+  );
+}
+
+function PackageDetailList({ result }: { result: PublicTrackingResult }) {
+  return (
+    <div className="divide-y divide-border border-y border-border">
+      <Detail icon={UserRound} label="Nama" value={result.customerName || "-"} />
+      <Detail icon={PackageCheck} label="Jenis Jastip" value={result.serviceType || "-"} />
+      <Detail
+        icon={Weight}
+        label="Berat / Volume"
+        value={`${formatWeight(result.realWeight)} / ${formatWeight(result.volumeWeight)}`}
+      />
+      <Detail icon={Wallet} label="Ongkir" value={formatRupiah(result.totalShipping)} />
+      <Detail
+        icon={CircleCheck}
+        label="Pengambilan"
+        value={result.pickedUp ? "Sudah Diambil" : "Belum Diambil"}
+      />
+    </div>
+  );
+}
+
+function TransitNotice() {
+  return (
+    <div className="rounded-2xl bg-accent/50 px-4 py-4 text-sm leading-relaxed text-accent-foreground">
+      Paket masih dalam proses perjalanan menuju Manokwari. Detail berat dan ongkir akan ditampilkan
+      setelah paket tiba dan diverifikasi di gudang Manokwari.
+    </div>
+  );
+}
+
+function ContactAdminLink() {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Link
+        to="/kontak"
+        className="ml-auto rounded-full border border-border px-4 py-2 text-xs font-bold transition-colors hover:bg-muted"
+      >
+        Hubungi Admin
+      </Link>
+    </div>
   );
 }
 

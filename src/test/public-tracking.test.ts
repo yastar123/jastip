@@ -35,7 +35,7 @@ describe("public package tracking", () => {
     expect(resolveServiceRoute(null, services)).toBeNull();
   });
 
-  it("returns all exact-name matches without exposing financial or full package details", async () => {
+  it("returns full details for arrived exact-name matches but redacts packages in transit", async () => {
     const query = vi.fn(async () => ({
       rows: [
         makeRow(),
@@ -60,9 +60,10 @@ describe("public package tracking", () => {
       resi: "JAJ-001",
       status: "Siap Diambil",
       lastLocation: "Manokwari",
-      totalShipping: null,
-      realWeight: null,
-      customerName: null,
+      totalShipping: "38500",
+      realWeight: "0.5",
+      volumeWeight: "0.4",
+      customerName: "Anya Putri",
     });
     expect(result[1]).toMatchObject({
       resi: "JAJ-002",
@@ -70,6 +71,7 @@ describe("public package tracking", () => {
       lastLocation: "Surabaya",
       totalShipping: null,
       realWeight: null,
+      customerName: null,
     });
   });
 

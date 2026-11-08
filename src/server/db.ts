@@ -331,7 +331,7 @@ export async function findPublicPackagesByName(
 ): Promise<PublicTrackingResult[]> {
   if (!name.trim()) return [];
   const rows = await queryPublicPackages("name", name, queryOverride);
-  return Promise.all(rows.map((row) => mapPublicPackage(row, false)));
+  return Promise.all(rows.map((row) => mapPublicPackage(row, true)));
 }
 
 export async function findPublicPackageByResi(
