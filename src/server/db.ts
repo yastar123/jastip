@@ -105,22 +105,22 @@ export async function isTrackingDatabaseAvailable(): Promise<boolean> {
 
 type PublicPackageRow = {
   resi: string;
+  customer_name: string;
   package_number: string | null;
   package_date: string | null;
+  last_updated: string | null;
   service_type: string | null;
   route: string | null;
+  last_location: string | null;
   real_weight: string | null;
   volume_weight: string | null;
   billable_weight: string | null;
-  additional_fee_description: string | null;
+  total_shipping: string | null;
   all_picked_up: boolean;
-  all_verified: boolean;
+  arrived_at_destination: boolean;
 };
 
-type PublicPackageQuery = (
-  text: string,
-  values: (string | null)[],
-) => Promise<{ rows: PublicPackageRow[] }>;
+type PublicPackageQuery = (text: string, values: string[]) => Promise<{ rows: PublicPackageRow[] }>;
 
 export function resolveServiceRoute(
   serviceType: string | null,
@@ -135,11 +135,11 @@ export function resolveServiceRoute(
   );
 }
 
-export async function findPublicPackage(
-  name: string | undefined,
-  resi: string,
+async function queryPublicPackages(
+  filter: "name" | "resi",
+  value: string,
   queryOverride?: PublicPackageQuery,
-): Promise<PublicTrackingResult | null> {
+): Promise<PublicPackageRow[]> {
   let query = queryOverride;
   if (!query) {
     const pool = getTrackingDatabasePool();
@@ -149,18 +149,22 @@ export async function findPublicPackage(
     query = (text, values) => pool.query<PublicPackageRow>(text, values);
   }
 
+  const filterSql =
+    filter === "name"
+      ? "LOWER(BTRIM(customer_name)) = LOWER(BTRIM($1))"
+      : "UPPER(BTRIM(resi_number)) = UPPER(BTRIM($1))";
   const result = await query(
     `WITH matched_packages AS (
        SELECT packages.*, to_jsonb(packages) AS package_data
        FROM packages
-       WHERE UPPER(BTRIM(resi_number)) = UPPER(BTRIM($1))
-         AND ($2::text IS NULL OR LOWER(BTRIM(customer_name)) = LOWER(BTRIM($2)))
+       WHERE ${filterSql}
      ),
      public_package_rows AS (
        SELECT
          UPPER(BTRIM(resi_number)) AS resi_key,
          LOWER(BTRIM(customer_name)) AS customer_key,
          BTRIM(resi_number) AS resi,
+         BTRIM(customer_name) AS customer_name,
          COALESCE(
            NULLIF(BTRIM(package_data->>'no_paket'), ''),
            NULLIF(BTRIM(package_data->>'package_number'), ''),
@@ -174,6 +178,14 @@ export async function findPublicPackage(
            NULLIF(BTRIM(package_data->>'package_date'), ''),
            NULLIF(BTRIM(package_data->>'created_at'), '')
          ) AS package_date,
+         COALESCE(
+           NULLIF(BTRIM(package_data->>'tanggal_update'), ''),
+           NULLIF(BTRIM(package_data->>'last_updated'), ''),
+           NULLIF(BTRIM(package_data->>'updated_at'), ''),
+           NULLIF(BTRIM(package_data->>'updated'), ''),
+           NULLIF(BTRIM(package_data->>'tanggal'), ''),
+           NULLIF(BTRIM(package_data->>'package_date'), '')
+         ) AS last_updated,
          COALESCE(
            NULLIF(BTRIM(package_data->>'jenis_jastip'), ''),
            NULLIF(BTRIM(package_data->>'service_type'), ''),
@@ -189,6 +201,15 @@ export async function findPublicPackage(
              NULLIF(COALESCE(package_data->>'tujuan', package_data->>'destination', package_data->>'kota_tujuan'), '')
            ), '')
          ) AS route,
+           COALESCE(
+             NULLIF(BTRIM(package_data->>'lokasi_terakhir'), ''),
+             NULLIF(BTRIM(package_data->>'last_location'), ''),
+             NULLIF(BTRIM(package_data->>'current_location'), ''),
+             NULLIF(BTRIM(package_data->>'lokasi'), ''),
+             NULLIF(BTRIM(package_data->>'location'), ''),
+             NULLIF(BTRIM(package_data->>'kota_terakhir'), ''),
+             NULLIF(BTRIM(package_data->>'current_city'), '')
+           ) AS last_location,
          NULLIF(REPLACE(COALESCE(
            NULLIF(package_data->>'berat_real', ''),
            NULLIF(package_data->>'real_weight', ''),
@@ -209,42 +230,73 @@ export async function findPublicPackage(
            NULLIF(package_data->>'berat_tagihan', ''),
            NULLIF(package_data->>'berat_dipakai', '')
          ), ',', '.'), '')::numeric AS billable_weight,
-         COALESCE(
-           NULLIF(BTRIM(package_data->>'keterangan_biaya_tambahan'), ''),
-           NULLIF(BTRIM(package_data->>'additional_fee_description'), ''),
-           NULLIF(BTRIM(package_data->>'catatan_biaya_tambahan'), '')
-         ) AS additional_fee_description,
+         CASE
+           WHEN COALESCE(
+             NULLIF(BTRIM(package_data->>'total_ongkir'), ''),
+             NULLIF(BTRIM(package_data->>'total_shipping'), ''),
+             NULLIF(BTRIM(package_data->>'ongkir'), ''),
+             NULLIF(BTRIM(package_data->>'shipping_cost'), ''),
+             NULLIF(BTRIM(package_data->>'biaya_pengiriman'), '')
+           ) ~ '^[0-9]{1,3}([.,][0-9]{3})+$'
+           THEN REGEXP_REPLACE(
+             COALESCE(
+               NULLIF(BTRIM(package_data->>'total_ongkir'), ''),
+               NULLIF(BTRIM(package_data->>'total_shipping'), ''),
+               NULLIF(BTRIM(package_data->>'ongkir'), ''),
+               NULLIF(BTRIM(package_data->>'shipping_cost'), ''),
+               NULLIF(BTRIM(package_data->>'biaya_pengiriman'), '')
+             ),
+             '[.,]', '', 'g'
+           )::numeric
+           ELSE NULLIF(REPLACE(REGEXP_REPLACE(COALESCE(
+             NULLIF(BTRIM(package_data->>'total_ongkir'), ''),
+             NULLIF(BTRIM(package_data->>'total_shipping'), ''),
+             NULLIF(BTRIM(package_data->>'ongkir'), ''),
+             NULLIF(BTRIM(package_data->>'shipping_cost'), ''),
+             NULLIF(BTRIM(package_data->>'biaya_pengiriman'), '')
+           ), '[^0-9,.-]', '', 'g'), ',', '.'), '')::numeric
+         END AS total_shipping,
          UPPER(BTRIM(COALESCE(status_pengambilan, ''))) = 'SUDAH_DIAMBIL' AS picked_up,
-         UPPER(BTRIM(COALESCE(status_verifikasi, ''))) = 'SUDAH_DIVERIFIKASI' AS verified
+         UPPER(REPLACE(BTRIM(COALESCE(status_verifikasi, '')), ' ', '_'))
+           IN ('SUDAH_DIVERIFIKASI', 'TIBA_DI_MANOKWARI') AS arrived_at_destination
        FROM matched_packages
      )
      SELECT
        MIN(resi) AS resi,
+       MIN(customer_name) AS customer_name,
        MIN(package_number) AS package_number,
        MIN(package_date) AS package_date,
+       MAX(last_updated) AS last_updated,
        MIN(service_type) AS service_type,
        MIN(route) AS route,
+       MIN(last_location) AS last_location,
        CASE WHEN COUNT(real_weight) = 0 THEN NULL ELSE SUM(real_weight)::text END AS real_weight,
        CASE WHEN COUNT(volume_weight) = 0 THEN NULL ELSE SUM(volume_weight)::text END AS volume_weight,
        CASE WHEN COUNT(billable_weight) = 0 THEN NULL ELSE SUM(billable_weight)::text END AS billable_weight,
-       MIN(additional_fee_description) AS additional_fee_description,
        BOOL_AND(picked_up) AS all_picked_up,
-       BOOL_AND(verified) AS all_verified
+       BOOL_AND(arrived_at_destination) AS arrived_at_destination,
+       CASE
+         WHEN BOOL_AND(arrived_at_destination) AND COUNT(total_shipping) > 0
+         THEN SUM(total_shipping)::text
+         ELSE NULL
+       END AS total_shipping
      FROM public_package_rows
      GROUP BY resi_key, customer_key
-       ORDER BY resi_key, customer_key
-       LIMIT 2`,
-    [resi, name?.trim() || null],
+     ORDER BY MAX(last_updated) DESC NULLS LAST, resi_key`,
+    [value.trim()],
   );
-  if (!name && result.rows.length > 1) return null;
-  const row = result.rows[0];
-  if (!row) return null;
+  return result.rows;
+}
 
+async function mapPublicPackage(
+  row: PublicPackageRow,
+  includeDetails: boolean,
+): Promise<PublicTrackingResult> {
   const status = row.all_picked_up
-    ? "Paket sudah diambil"
-    : row.all_verified
-      ? "Paket tiba di gudang"
-      : "Paket dalam proses pengiriman";
+    ? "Sudah Diambil"
+    : row.arrived_at_destination
+      ? "Siap Diambil"
+      : "Dalam Perjalanan";
   const route =
     row.route ??
     (row.service_type
@@ -253,16 +305,42 @@ export async function findPublicPackage(
 
   return {
     resi: row.resi,
+    customerName: includeDetails && row.arrived_at_destination ? row.customer_name : null,
     packageNumber: row.package_number,
     packageDate: row.package_date,
+    lastUpdated: row.last_updated,
     serviceType: row.service_type,
     route,
-    realWeight: row.real_weight,
-    volumeWeight: row.volume_weight,
-    billableWeight: row.billable_weight,
-    additionalFeeDescription: row.additional_fee_description,
+    lastLocation: row.arrived_at_destination
+      ? "Manokwari"
+      : row.last_location || "Dalam Perjalanan ke Manokwari",
+    realWeight: includeDetails && row.arrived_at_destination ? row.real_weight : null,
+    volumeWeight: includeDetails && row.arrived_at_destination ? row.volume_weight : null,
+    billableWeight: includeDetails && row.arrived_at_destination ? row.billable_weight : null,
+    totalShipping: includeDetails && row.arrived_at_destination ? row.total_shipping : null,
+    arrivedAtDestination: row.arrived_at_destination,
+    pickedUp: row.all_picked_up,
     status,
   };
+}
+
+export async function findPublicPackagesByName(
+  name: string,
+  queryOverride?: PublicPackageQuery,
+): Promise<PublicTrackingResult[]> {
+  if (!name.trim()) return [];
+  const rows = await queryPublicPackages("name", name, queryOverride);
+  return Promise.all(rows.map((row) => mapPublicPackage(row, false)));
+}
+
+export async function findPublicPackageByResi(
+  resi: string,
+  queryOverride?: PublicPackageQuery,
+): Promise<PublicTrackingResult | null> {
+  if (!resi.trim()) return null;
+  const rows = await queryPublicPackages("resi", resi, queryOverride);
+  if (rows.length !== 1) return null;
+  return await mapPublicPackage(rows[0]!, true);
 }
 
 export async function initDatabase() {

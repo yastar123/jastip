@@ -9,9 +9,10 @@ import {
   getDatabaseStatus,
   initDatabase,
   isTrackingDatabaseAvailable,
-  findPublicPackage,
+  findPublicPackageByResi,
+  findPublicPackagesByName,
 } from "./db";
-import { type Shipment } from "../lib/tracking";
+import { type PublicTrackingResult, type Shipment } from "../lib/tracking";
 
 dotenv.config();
 
@@ -23,38 +24,76 @@ export const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
-// Public package tracking only returns the fields customers are allowed to see.
-app.post("/api/public/track", async (req: ExpRequest, res: ExpResponse) => {
-  const { name, resi } = req.body || {};
-  if (
-    (name !== undefined && typeof name !== "string") ||
-    typeof resi !== "string" ||
-    !resi.trim() ||
-    (typeof name === "string" && name.trim().length > 255) ||
-    resi.trim().length > 64
-  ) {
-    return res.status(400).json({ success: false, error: "Nomor resi wajib diisi." });
+type PublicTrackingSearch = {
+  searchBy: "name" | "resi";
+  value: string;
+};
+
+function parsePublicTrackingSearch(body: unknown): PublicTrackingSearch | null {
+  if (!body || typeof body !== "object") return null;
+  const input = body as Record<string, unknown>;
+  if (input.searchBy === "name" && typeof input.name === "string") {
+    const name = input.name.trim();
+    return name && name.length <= 255 ? { searchBy: "name", value: name } : null;
+  }
+  if (input.searchBy === "resi" && typeof input.resi === "string") {
+    const resi = input.resi.trim();
+    return resi && resi.length <= 64 ? { searchBy: "resi", value: resi } : null;
+  }
+  return null;
+}
+
+async function searchPublicTracking(body: unknown): Promise<{
+  status: number;
+  payload: { success: boolean; data?: PublicTrackingResult[]; error?: string };
+}> {
+  const search = parsePublicTrackingSearch(body);
+  if (!search) {
+    return {
+      status: 400,
+      payload: {
+        success: false,
+        error: "Masukkan nama konsumen atau nomor resi yang valid.",
+      },
+    };
   }
 
   try {
-    const data = await findPublicPackage(
-      typeof name === "string" ? name.trim() || undefined : undefined,
-      resi.trim(),
-    );
-    if (!data) {
-      return res.status(404).json({
-        success: false,
-        error: "Paket tidak ditemukan. Periksa nomor resi atau isi nama penerima jika diperlukan.",
-      });
+    let data: PublicTrackingResult[];
+    if (search.searchBy === "name") {
+      data = await findPublicPackagesByName(search.value);
+    } else {
+      const result = await findPublicPackageByResi(search.value);
+      data = result ? [result] : [];
     }
-    return res.json({ success: true, data });
+    if (data.length === 0) {
+      return {
+        status: 404,
+        payload: {
+          success: false,
+          error:
+            search.searchBy === "name"
+              ? "Paket dengan nama tersebut tidak ditemukan. Pastikan ejaan nama sesuai data pendaftaran."
+              : "Nomor resi tidak ditemukan atau belum dapat diverifikasi. Periksa kembali nomor resi Anda.",
+        },
+      };
+    }
+    return { status: 200, payload: { success: true, data } };
   } catch (err: unknown) {
     console.error("Public package tracking failed:", err);
-    return res.status(503).json({
-      success: false,
-      error: "Layanan pelacakan sementara tidak tersedia. Silakan coba lagi atau hubungi admin.",
-    });
+    return {
+      status: 503,
+      payload: {
+        success: false,
+        error: "Layanan pelacakan sementara tidak tersedia. Silakan coba lagi atau hubungi admin.",
+      },
+    };
   }
+}
+
+app.post("/api/public/track", async (req: ExpRequest, res: ExpResponse) => {
+  const result = await searchPublicTracking(req.body);
+  return res.status(result.status).json(result.payload);
 });
 
 type AuthSettings = { email: string; password: string; sessionSecret: string };
@@ -326,50 +365,9 @@ export async function handleFetchApi(request: Request): Promise<Response | null>
   // Handle API routes directly with Web Request / Response
   try {
     if (url.pathname === "/api/public/track" && request.method === "POST") {
-      const body = (await request.json()) as { name?: unknown; resi?: unknown };
-      if (
-        (body.name !== undefined && typeof body.name !== "string") ||
-        typeof body.resi !== "string" ||
-        !body.resi.trim() ||
-        (typeof body.name === "string" && body.name.trim().length > 255) ||
-        body.resi.trim().length > 64
-      ) {
-        return new Response(JSON.stringify({ success: false, error: "Nomor resi wajib diisi." }), {
-          status: 400,
-          headers: { "content-type": "application/json" },
-        });
-      }
-
-      let data;
-      try {
-        data = await findPublicPackage(
-          typeof body.name === "string" ? body.name.trim() || undefined : undefined,
-          body.resi.trim(),
-        );
-      } catch (err: unknown) {
-        console.error("Public package tracking failed:", err);
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error:
-              "Layanan pelacakan sementara tidak tersedia. Silakan coba lagi atau hubungi admin.",
-          }),
-          { status: 503, headers: { "content-type": "application/json" } },
-        );
-      }
-      if (!data) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error:
-              "Paket tidak ditemukan. Periksa nomor resi atau isi nama penerima jika diperlukan.",
-          }),
-          { status: 404, headers: { "content-type": "application/json" } },
-        );
-      }
-
-      return new Response(JSON.stringify({ success: true, data }), {
-        status: 200,
+      const result = await searchPublicTracking(await request.json());
+      return new Response(JSON.stringify(result.payload), {
+        status: result.status,
         headers: { "content-type": "application/json" },
       });
     }

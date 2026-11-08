@@ -1,5 +1,27 @@
 import { describe, expect, it, vi } from "vitest";
-import { findPublicPackage, resolveServiceRoute } from "@/server/db";
+import {
+  findPublicPackageByResi,
+  findPublicPackagesByName,
+  resolveServiceRoute,
+} from "@/server/db";
+
+const makeRow = (overrides: Record<string, unknown> = {}) => ({
+  resi: "JAJ-001",
+  customer_name: "Anya Putri",
+  package_number: "PKT-001",
+  package_date: "2026-11-07",
+  last_updated: "2026-11-08",
+  service_type: "Jastip Pesawat",
+  route: "Jakarta → Manokwari",
+  last_location: "Jakarta",
+  real_weight: "0.5",
+  volume_weight: "0.4",
+  billable_weight: "0.5",
+  total_shipping: "38500",
+  all_picked_up: false,
+  arrived_at_destination: true,
+  ...overrides,
+});
 
 describe("public package tracking", () => {
   it("uses the matching CMS service route when a package has no route", () => {
@@ -13,164 +35,114 @@ describe("public package tracking", () => {
     expect(resolveServiceRoute(null, services)).toBeNull();
   });
 
-  it("matches the full name and resi and returns package details without financial fields", async () => {
+  it("returns all exact-name matches without exposing financial or full package details", async () => {
     const query = vi.fn(async () => ({
       rows: [
-        {
-          resi: "JY2152364473",
-          package_number: null,
-          package_date: "2026-11-06",
-          service_type: "Jastip Pesawat",
-          route: "Jakarta → Manokwari",
-          real_weight: "0.18",
-          volume_weight: null,
-          billable_weight: "0.18",
-          additional_fee_description: null,
-          all_picked_up: false,
-          all_verified: false,
-        },
+        makeRow(),
+        makeRow({
+          resi: "JAJ-002",
+          package_number: "PKT-002",
+          arrived_at_destination: false,
+          last_location: "Surabaya",
+        }),
       ],
     }));
 
-    const result = await findPublicPackage("Desy Sinaga", "JY2152364473", query);
+    const result = await findPublicPackagesByName("Anya Putri", query);
 
     expect(query).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "AND ($2::text IS NULL OR LOWER(BTRIM(customer_name)) = LOWER(BTRIM($2)))",
-      ),
-      ["JY2152364473", "Desy Sinaga"],
+      expect.stringContaining("LOWER(BTRIM(customer_name)) = LOWER(BTRIM($1))"),
+      ["Anya Putri"],
     );
-    expect(query.mock.calls[0]?.[0]).not.toContain("total_shipping");
-    expect(query.mock.calls[0]?.[0]).not.toContain("package_data->>'additional_fee'");
-    expect(result).toEqual({
-      resi: "JY2152364473",
-      packageNumber: null,
-      packageDate: "2026-11-06",
-      serviceType: "Jastip Pesawat",
-      route: "Jakarta → Manokwari",
-      realWeight: "0.18",
-      volumeWeight: null,
-      billableWeight: "0.18",
-      additionalFeeDescription: null,
-      status: "Paket dalam proses pengiriman",
+    expect(query.mock.calls[0]?.[0]).not.toContain("ILIKE");
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({
+      resi: "JAJ-001",
+      status: "Siap Diambil",
+      lastLocation: "Manokwari",
+      totalShipping: null,
+      realWeight: null,
+      customerName: null,
+    });
+    expect(result[1]).toMatchObject({
+      resi: "JAJ-002",
+      status: "Dalam Perjalanan",
+      lastLocation: "Surabaya",
+      totalShipping: null,
+      realWeight: null,
     });
   });
 
-  it("allows a resi-only lookup when it belongs to a single customer", async () => {
+  it("returns full price, weight, name, and pickup state by resi only after arrival", async () => {
+    const query = vi.fn(async () => ({ rows: [makeRow()] }));
+
+    const result = await findPublicPackageByResi("JAJ-001", query);
+
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("UPPER(BTRIM(resi_number)) = UPPER(BTRIM($1))"),
+      ["JAJ-001"],
+    );
+    expect(result).toMatchObject({
+      resi: "JAJ-001",
+      customerName: "Anya Putri",
+      serviceType: "Jastip Pesawat",
+      realWeight: "0.5",
+      volumeWeight: "0.4",
+      totalShipping: "38500",
+      arrivedAtDestination: true,
+      pickedUp: false,
+      status: "Siap Diambil",
+      lastLocation: "Manokwari",
+    });
+  });
+
+  it("redacts name, price, and weight by resi while the package is in transit", async () => {
     const query = vi.fn(async () => ({
       rows: [
-        {
-          resi: "JAJ-003",
-          package_number: null,
-          package_date: null,
-          service_type: null,
-          route: null,
-          real_weight: null,
-          volume_weight: null,
-          billable_weight: null,
-          additional_fee_description: null,
-          all_picked_up: false,
-          all_verified: false,
-        },
+        makeRow({
+          arrived_at_destination: false,
+          last_location: "Surabaya",
+        }),
       ],
     }));
 
-    await expect(findPublicPackage(undefined, "JAJ-003", query)).resolves.toMatchObject({
-      resi: "JAJ-003",
-      status: "Paket dalam proses pengiriman",
-    });
-    expect(query).toHaveBeenCalledWith(expect.any(String), ["JAJ-003", null]);
-  });
+    const result = await findPublicPackageByResi("JAJ-001", query);
 
-  it("requires the optional name to distinguish a resi shared by multiple customers", async () => {
-    const row = {
-      resi: "JAJ-004",
-      package_number: null,
-      package_date: null,
-      service_type: null,
-      route: null,
-      real_weight: null,
-      volume_weight: null,
-      billable_weight: null,
-      additional_fee_description: null,
-      all_picked_up: false,
-      all_verified: false,
-    };
-    const query = vi.fn(async () => ({ rows: [row, row] }));
-
-    await expect(findPublicPackage(undefined, "JAJ-004", query)).resolves.toBeNull();
-    await expect(findPublicPackage("Customer", "JAJ-004", query)).resolves.toMatchObject({
-      resi: "JAJ-004",
-    });
-  });
-
-  it("maps verified and picked-up statuses without exposing invoice or customer data", async () => {
-    const query = vi
-      .fn()
-      .mockResolvedValueOnce({
-        rows: [
-          {
-            resi: "JAJ-001",
-            package_number: null,
-            package_date: null,
-            service_type: null,
-            route: null,
-            real_weight: null,
-            volume_weight: null,
-            billable_weight: null,
-            additional_fee_description: null,
-            all_picked_up: false,
-            all_verified: true,
-          },
-        ],
-      })
-      .mockResolvedValueOnce({
-        rows: [
-          {
-            resi: "JAJ-002",
-            package_number: null,
-            package_date: null,
-            service_type: null,
-            route: null,
-            real_weight: null,
-            volume_weight: null,
-            billable_weight: null,
-            additional_fee_description: null,
-            all_picked_up: true,
-            all_verified: true,
-          },
-        ],
-      });
-
-    await expect(findPublicPackage("Customer", "JAJ-001", query)).resolves.toEqual({
-      resi: "JAJ-001",
-      packageNumber: null,
-      packageDate: null,
-      serviceType: null,
-      route: null,
+    expect(result).toMatchObject({
+      customerName: null,
+      totalShipping: null,
       realWeight: null,
       volumeWeight: null,
       billableWeight: null,
-      additionalFeeDescription: null,
-      status: "Paket tiba di gudang",
-    });
-    await expect(findPublicPackage("Customer", "JAJ-002", query)).resolves.toEqual({
-      resi: "JAJ-002",
-      packageNumber: null,
-      packageDate: null,
-      serviceType: null,
-      route: null,
-      realWeight: null,
-      volumeWeight: null,
-      billableWeight: null,
-      additionalFeeDescription: null,
-      status: "Paket sudah diambil",
+      arrivedAtDestination: false,
+      status: "Dalam Perjalanan",
+      lastLocation: "Surabaya",
     });
   });
 
-  it("returns no result for an unmatched name and resi", async () => {
-    const query = vi.fn(async () => ({ rows: [] }));
+  it("marks arrived packages as picked up when pickup is complete", async () => {
+    const query = vi.fn(async () => ({
+      rows: [makeRow({ all_picked_up: true })],
+    }));
 
-    await expect(findPublicPackage("Wrong Name", "UNKNOWN", query)).resolves.toBeNull();
+    await expect(findPublicPackageByResi("JAJ-001", query)).resolves.toMatchObject({
+      pickedUp: true,
+      status: "Sudah Diambil",
+    });
+  });
+
+  it("does not return an ambiguous resi shared by different customers", async () => {
+    const query = vi.fn(async () => ({
+      rows: [makeRow(), makeRow({ customer_name: "Customer Lain" })],
+    }));
+
+    await expect(findPublicPackageByResi("JAJ-001", query)).resolves.toBeNull();
+  });
+
+  it("returns no package for an unmatched name or resi", async () => {
+    const noRows = vi.fn(async () => ({ rows: [] }));
+
+    await expect(findPublicPackagesByName("Nama Tidak Ada", noRows)).resolves.toEqual([]);
+    await expect(findPublicPackageByResi("UNKNOWN", noRows)).resolves.toBeNull();
   });
 });

@@ -91,7 +91,7 @@ function AdminDashboard() {
 
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [showLivePreview, setShowLivePreview] = useState<boolean>(true);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   const handleSave = useCallback(async () => {
     const success = await saveChanges();
@@ -368,14 +368,14 @@ function AdminDashboard() {
           {activeTab === "global" && <GlobalBrandCMSPanel onSave={handleSave} />}
 
           {activeTab === "preview" && (
-            <div className="flex h-full flex-col">
+            <div className="flex h-full min-h-0 min-w-0 flex-col">
               <PreviewToolbar
                 activePage={activePreviewPage}
                 setActivePage={setActivePreviewPage}
                 device={previewDevice}
                 setDevice={setPreviewDevice}
               />
-              <div className="flex flex-1 items-center justify-center overflow-auto rounded-2xl border border-border bg-muted/40 p-4">
+              <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-auto rounded-2xl border border-border bg-muted/40 p-4">
                 <PreviewFrame
                   page={activePreviewPage}
                   device={previewDevice}
@@ -388,14 +388,14 @@ function AdminDashboard() {
 
         {/* SPLIT LIVE PREVIEW (RIGHT SIDE) */}
         {showLivePreview && activeTab !== "preview" && (
-          <div className="hidden min-w-0 flex-1 flex-col border-l border-border bg-muted/30 lg:flex">
+          <div className="hidden min-h-0 min-w-0 flex-1 flex-col border-l border-border bg-muted/30 lg:flex">
             <PreviewToolbar
               activePage={activePreviewPage}
               setActivePage={setActivePreviewPage}
               device={previewDevice}
               setDevice={setPreviewDevice}
             />
-            <div className="flex flex-1 items-center justify-center overflow-auto p-4">
+            <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-auto p-4">
               <PreviewFrame
                 page={activePreviewPage}
                 device={previewDevice}
@@ -549,15 +549,20 @@ function PreviewFrame({
       ? { width: 390, height: 844 }
       : device === "tablet"
         ? { width: 768, height: 1024 }
-        : { width: Math.max(areaSize.width, 1), height: Math.max(areaSize.height, 1) };
+        : { width: 1440, height: 900 };
   const scale =
-    device === "desktop" || !areaSize.width ? 1 : Math.min(1, areaSize.width / viewport.width);
+    areaSize.width > 0 && areaSize.height > 0
+      ? Math.min(1, areaSize.width / viewport.width, areaSize.height / viewport.height)
+      : 1;
   const iframeDocument = `<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"><link rel="stylesheet" href="${appCss}"><style>html,body,#preview-root{margin:0;min-height:100%;}body{overflow-x:hidden}</style></head><body><div id="preview-root"></div></body></html>`;
 
   return (
-    <div ref={areaRef} className="size-full min-h-0 overflow-auto">
+    <div
+      ref={areaRef}
+      className="flex size-full min-h-0 min-w-0 items-center justify-center overflow-auto"
+    >
       <div
-        className="relative mx-auto"
+        className="relative shrink-0"
         style={{
           width: `${viewport.width * scale}px`,
           height: `${viewport.height * scale}px`,
@@ -572,7 +577,7 @@ function PreviewFrame({
               iframeRef.current?.contentDocument?.getElementById("preview-root") ?? null,
             );
           }}
-          className="origin-top-left rounded-xl border border-border bg-background shadow-2xl"
+          className="absolute left-0 top-0 origin-top-left rounded-xl border border-border bg-background shadow-2xl"
           style={{
             width: `${viewport.width}px`,
             height: `${viewport.height}px`,
@@ -1476,17 +1481,14 @@ function LacakPageCMSPanel({ onSave }: { onSave?: () => void }) {
     headerBadge: "Lacak Paket",
     headerTitle: "Cek posisi paket Anda di sini",
     headerDescription:
-      "Masukkan nomor resi untuk melihat status dan detail paket. Nama penerima boleh diisi jika diperlukan.",
+      "Cari seluruh paket berdasarkan nama konsumen, atau cek detail satu paket menggunakan nomor resi.",
     cardDisclaimer:
-      "Nomor resi wajib diisi; nama penerima opsional. Detail paket ditampilkan tanpa harga atau nominal. Invoice tidak tersedia untuk konsumen.",
+      "Pilih pencarian berdasarkan nama atau nomor resi. Detail ongkir dan berat ditampilkan setelah paket tiba di Manokwari.",
     demoBoxTitle: "Data Resi Terdaftar",
-    demoBoxDescription:
-      "Klik salah satu contoh di bawah untuk mencoba pelacakan. Data dikelola admin melalui Dashboard dan diperbarui secara real-time.",
-    invoiceNotice:
-      "Konsumen hanya dapat melihat data harga dan status paket. Untuk faktur/invoice silakan hubungi admin.",
+    demoBoxDescription: "Masukkan nama konsumen atau nomor resi untuk melihat status paket.",
+    invoiceNotice: "Status pengambilan diperbarui oleh admin gudang Manokwari.",
     emptyNoticeTitle: "Belum ada paket ditampilkan",
-    emptyNoticeText:
-      "Isi nomor resi pada formulir, lalu tekan Cek Status Paket. Nama penerima opsional dan dapat membantu jika resi tidak ditemukan.",
+    emptyNoticeText: "Pilih metode pencarian, lalu masukkan nama konsumen atau nomor resi.",
   };
 
   const shipments = draftData.shipments;

@@ -21,13 +21,18 @@ export type Shipment = {
 
 export type PublicTrackingResult = {
   resi: string;
+  customerName: string | null;
   packageNumber: string | null;
   packageDate: string | null;
+  lastUpdated: string | null;
   serviceType: string | null;
   route: string | null;
+  lastLocation: string | null;
   realWeight: string | null;
   volumeWeight: string | null;
   billableWeight: string | null;
-  additionalFeeDescription: string | null;
+  totalShipping: string | null;
+  arrivedAtDestination: boolean;
+  pickedUp: boolean;
   status: string;
 };

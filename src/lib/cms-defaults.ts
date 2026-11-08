@@ -90,16 +90,14 @@ export const DEFAULT_CMS_DATA: AppCMSData = {
     headerBadge: "Lacak Paket",
     headerTitle: "Cek posisi paket Anda di sini",
     headerDescription:
-      "Masukkan nomor resi untuk melihat status dan detail paket. Nama penerima boleh diisi jika diperlukan.",
+      "Cari seluruh paket berdasarkan nama konsumen, atau cek detail satu paket menggunakan nomor resi.",
     cardDisclaimer:
-      "Nomor resi wajib diisi; nama penerima opsional. Detail paket ditampilkan tanpa harga atau nominal. Invoice tidak tersedia untuk konsumen.",
+      "Pilih pencarian berdasarkan nama atau nomor resi. Detail ongkir dan berat ditampilkan setelah paket tiba di Manokwari.",
     demoBoxTitle: "Pelacakan Paket",
-    demoBoxDescription: "Masukkan nomor resi untuk melihat detail paket dari sistem internal.",
-    invoiceNotice:
-      "Informasi harga dan nominal tidak ditampilkan. Untuk pertanyaan lebih lanjut, silakan hubungi admin.",
+    demoBoxDescription: "Masukkan nama konsumen atau nomor resi untuk melihat status paket.",
+    invoiceNotice: "Status pengambilan diperbarui oleh admin gudang Manokwari.",
     emptyNoticeTitle: "Belum ada paket ditampilkan",
-    emptyNoticeText:
-      "Isi nomor resi untuk melihat detail paket. Nama penerima opsional dan dapat membantu jika resi tidak ditemukan.",
+    emptyNoticeText: "Pilih metode pencarian, lalu masukkan nama konsumen atau nomor resi.",
   },
   kontakPage: {
     headerBadge: "Kontak",

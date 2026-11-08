@@ -1,6 +1,19 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Search, ScanBarcode, CircleAlert, CircleCheck, LoaderCircle } from "lucide-react";
+import {
+  Search,
+  ScanBarcode,
+  CircleAlert,
+  CircleCheck,
+  LoaderCircle,
+  MapPin,
+  CalendarDays,
+  Weight,
+  Wallet,
+  UserRound,
+  PackageCheck,
+} from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 import { type PublicTrackingResult } from "@/lib/tracking";
 import { useCMS } from "@/lib/cms-context";
 import { type AppCMSData } from "@/lib/cms-types";
@@ -14,12 +27,13 @@ export const Route = createFileRoute("/lacak")({
       {
         name: "description",
         content:
-          "Cek status dan detail paket Jastip Anggun Jaya dengan nomor resi, nama penerima opsional.",
+          "Cari seluruh paket Jastip Anggun Jaya berdasarkan nama konsumen, atau cek detail paket dengan nomor resi.",
       },
       { property: "og:title", content: "Lacak Paket — Jastip Anggun Jaya" },
       {
         property: "og:description",
-        content: "Masukkan nomor resi untuk melihat status dan detail paket Anda.",
+        content:
+          "Cari seluruh paket berdasarkan nama konsumen, atau cek detail paket dengan nomor resi.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: `${SITE_URL}/lacak` },
@@ -27,7 +41,8 @@ export const Route = createFileRoute("/lacak")({
       { name: "twitter:title", content: "Lacak Paket — Jastip Anggun Jaya" },
       {
         name: "twitter:description",
-        content: "Cek status dan detail paket Jastip Anggun Jaya menggunakan nomor resi.",
+        content:
+          "Cari seluruh paket berdasarkan nama konsumen, atau cek detail paket dengan nomor resi.",
       },
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/lacak` }],
@@ -41,53 +56,53 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
     headerBadge: "Lacak Paket",
     headerTitle: "Cek posisi paket Anda di sini",
     headerDescription:
-      "Masukkan nomor resi untuk melihat status dan detail paket. Nama penerima boleh diisi jika diperlukan.",
+      "Cari semua paket berdasarkan nama konsumen, atau cek detail satu paket menggunakan nomor resi.",
     cardDisclaimer:
-      "Nomor resi wajib diisi; nama penerima opsional. Detail paket ditampilkan tanpa harga atau nominal. Invoice tidak tersedia untuk konsumen.",
+      "Pilih pencarian berdasarkan nama atau nomor resi. Detail biaya hanya ditampilkan untuk paket yang sudah tiba di Manokwari.",
     demoBoxTitle: "Data Resi Terdaftar",
-    demoBoxDescription:
-      "Klik salah satu contoh di bawah untuk mencoba pelacakan. Data dikelola admin melalui Dashboard dan diperbarui secara real-time.",
-    invoiceNotice:
-      "Informasi harga dan nominal tidak ditampilkan. Untuk pertanyaan lebih lanjut, silakan hubungi admin.",
+    demoBoxDescription: "Masukkan nama lengkap atau nomor resi untuk melihat status paket.",
+    invoiceNotice: "Status pengambilan diperbarui oleh admin gudang Manokwari.",
     emptyNoticeTitle: "Belum ada paket ditampilkan",
-    emptyNoticeText:
-      "Isi nomor resi untuk melihat detail paket. Nama penerima opsional dan dapat membantu jika resi tidak ditemukan.",
+    emptyNoticeText: "Pilih metode pencarian, lalu masukkan nama konsumen atau nomor resi.",
   };
 
-  const [resi, setResi] = useState("");
-  const [name, setName] = useState("");
-  const [result, setResult] = useState<PublicTrackingResult | null>(null);
+  const [searchBy, setSearchBy] = useState<"name" | "resi">("name");
+  const [searchValue, setSearchValue] = useState("");
+  const [results, setResults] = useState<PublicTrackingResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!resi.trim()) {
-      setResult(null);
-      setError("Nomor resi wajib diisi.");
+    if (!searchValue.trim()) {
+      setResults([]);
+      setError(searchBy === "name" ? "Nama konsumen wajib diisi." : "Nomor resi wajib diisi.");
       return;
     }
 
     setIsSearching(true);
-    setResult(null);
+    setResults([]);
     setError(null);
     try {
       const response = await fetch("/api/public/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() || undefined, resi: resi.trim() }),
+        body: JSON.stringify({
+          searchBy,
+          [searchBy]: searchValue.trim(),
+        }),
       });
       const payload = (await response.json()) as {
-        data?: PublicTrackingResult;
+        data?: PublicTrackingResult[];
         error?: string;
       };
       if (!response.ok || !payload.data) {
         setError(payload.error || "Pelacakan gagal. Silakan coba lagi.");
         return;
       }
-      setResult(payload.data);
+      setResults(payload.data);
     } catch {
-      setResult(null);
+      setResults([]);
       setError("Layanan pelacakan tidak dapat dihubungi. Silakan coba lagi.");
     } finally {
       setIsSearching(false);
@@ -105,7 +120,7 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
             {lcp.headerTitle}
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-primary-foreground/85 sm:text-base">
-            {lcp.headerDescription}
+            Cari semua paket berdasarkan nama konsumen, atau cek satu paket dengan nomor resi.
           </p>
         </div>
       </section>
@@ -118,40 +133,78 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
               onSubmit={onSubmit}
               className="rounded-3xl border border-border bg-card p-6 shadow-elegant sm:p-7"
             >
-              <h2 className="text-lg font-extrabold">Data Pelacakan</h2>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Jastip Anggun Jaya
+                  </p>
+                  <h2 className="mt-1 text-2xl font-extrabold">Tracking Paket</h2>
+                </div>
+                <ScanBarcode className="size-8 text-primary" />
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Cari posisi dan status paket Anda
+              </p>
               <div className="gold-rule mt-3 w-14" />
-              <label className="mt-6 block">
-                <span className="text-sm font-bold">Nama Penerima / Pengirim (Opsional)</span>
+              <div
+                className="mt-5 grid grid-cols-2 rounded-full bg-secondary p-1"
+                role="tablist"
+                aria-label="Metode pencarian paket"
+              >
+                {[
+                  { id: "name", label: "Cari Nama" },
+                  { id: "resi", label: "Cari Resi" },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={searchBy === item.id}
+                    onClick={() => {
+                      setSearchBy(item.id as "name" | "resi");
+                      setSearchValue("");
+                      setResults([]);
+                      setError(null);
+                    }}
+                    className={
+                      "rounded-full px-4 py-2.5 text-sm font-bold transition-colors " +
+                      (searchBy === item.id
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground")
+                    }
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <label className="mt-5 block">
+                <span className="text-sm font-bold">
+                  {searchBy === "name" ? "Nama Konsumen" : "Nomor Resi"}
+                </span>
                 <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  autoComplete="name"
-                  placeholder="Boleh dikosongkan"
-                  className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none transition-shadow placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-ring"
-                />
-              </label>
-              <label className="mt-4 block">
-                <span className="text-sm font-bold">Nomor Resi</span>
-                <input
-                  value={resi}
-                  onChange={(e) => setResi(e.target.value)}
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
                   autoComplete="off"
                   required
-                  placeholder="Contoh: AJH-1024"
-                  className="mt-2 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm uppercase outline-none transition-shadow placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-ring"
+                  placeholder={
+                    searchBy === "name"
+                      ? "Masukkan nama sesuai pendaftaran"
+                      : "Contoh: JNT001234567"
+                  }
+                  className="mt-2 w-full rounded-full border border-input bg-background px-5 py-3.5 text-sm outline-none transition-shadow placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-ring"
                 />
               </label>
               <button
                 type="submit"
                 disabled={isSearching}
-                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-elegant transition-colors hover:bg-primary-deep"
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-elegant transition-colors hover:bg-primary-deep disabled:opacity-60"
               >
                 {isSearching ? (
                   <LoaderCircle className="size-4 animate-spin" />
                 ) : (
                   <Search className="size-4" />
                 )}
-                {isSearching ? "Mencari Paket..." : "Cek Status Paket"}
+                {isSearching ? "Mencari Paket..." : "Cari Paket"}
               </button>
               {error && (
                 <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -161,56 +214,22 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
               )}
               <div className="mt-6 flex items-start gap-2.5 rounded-xl bg-accent/50 px-4 py-3.5 text-xs leading-relaxed text-accent-foreground">
                 <CircleCheck className="mt-0.5 size-4 shrink-0" />
-                <span>{lcp.cardDisclaimer}</span>
+                <span>
+                  Pencarian nama menampilkan status seluruh paket yang cocok. Detail ongkir dan
+                  berat ditampilkan saat paket sudah tiba di Manokwari.
+                </span>
               </div>
             </form>
           </div>
 
           {/* HASIL */}
-          <div>
-            {result ? (
-              <div className="rounded-3xl border border-border bg-card shadow-elegant">
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-secondary/50 px-6 py-5 sm:px-8">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Nomor Resi
-                    </p>
-                    <p className="text-xl font-extrabold tracking-wide text-primary sm:text-2xl">
-                      {result.resi}
-                    </p>
-                  </div>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-xs font-extrabold text-primary-deep">
-                    <CircleCheck className="size-4" />
-                    {result.status}
-                  </span>
-                </div>
-
-                <div className="px-6 py-6 sm:px-8">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Detail label="No Paket" value={result.packageNumber || "-"} />
-                    <Detail label="Tanggal" value={formatPackageDate(result.packageDate)} />
-                    <Detail label="Jenis Jastip" value={result.serviceType || "-"} />
-                    <Detail label="Rute Pengiriman" value={result.route || "-"} />
-                    <Detail label="Berat Real" value={formatWeight(result.realWeight)} />
-                    <Detail label="Berat Volume" value={formatWeight(result.volumeWeight)} />
-                    <Detail label="Berat Digunakan" value={formatWeight(result.billableWeight)} />
-                    <Detail
-                      label="Keterangan Biaya Tambahan"
-                      value={result.additionalFeeDescription || "-"}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 border-t border-border bg-secondary/40 px-6 py-5 sm:px-8">
-                  <p className="text-xs text-muted-foreground">{lcp.invoiceNotice}</p>
-                  <Link
-                    to="/kontak"
-                    className="ml-auto rounded-full border border-border px-4 py-2 text-xs font-bold transition-colors hover:bg-muted"
-                  >
-                    Hubungi Admin
-                  </Link>
-                </div>
-              </div>
+          <div aria-live="polite">
+            {results.length > 0 ? (
+              searchBy === "name" ? (
+                <NameSearchResults results={results} />
+              ) : (
+                <ResiSearchResult result={results[0]!} />
+              )
             ) : (
               <div className="flex h-full min-h-[320px] flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-card/60 px-6 py-14 text-center">
                 <span className="inline-flex size-16 items-center justify-center rounded-2xl bg-secondary text-primary">
@@ -218,12 +237,144 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
                 </span>
                 <h2 className="mt-5 text-xl font-extrabold">{lcp.emptyNoticeTitle}</h2>
                 <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-                  {lcp.emptyNoticeText}
+                  Pilih metode pencarian, lalu masukkan nama konsumen atau nomor resi.
                 </p>
               </div>
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function NameSearchResults({ results }: { results: PublicTrackingResult[] }) {
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-xl font-extrabold">Hasil Pencarian</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {results.length} paket ditemukan berdasarkan nama
+        </p>
+      </div>
+      {results.map((result) => (
+        <article
+          key={`${result.resi}-${result.packageNumber ?? ""}`}
+          className="rounded-3xl border border-border bg-card p-5 shadow-elegant sm:p-6"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-extrabold">{result.serviceType || "Paket"}</h3>
+              <p className="mt-1 font-mono text-sm text-muted-foreground">{result.resi}</p>
+            </div>
+            <StatusBadge result={result} />
+          </div>
+          <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+            <SummaryItem icon={MapPin} label="Lokasi terakhir" value={result.lastLocation || "-"} />
+            <SummaryItem
+              icon={CalendarDays}
+              label="Tanggal update"
+              value={formatPackageDate(result.lastUpdated || result.packageDate)}
+            />
+          </div>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function ResiSearchResult({ result }: { result: PublicTrackingResult }) {
+  return (
+    <article className="rounded-3xl border border-border bg-card shadow-elegant">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border bg-secondary/50 px-5 py-5 sm:px-7">
+        <div>
+          <h2 className="text-xl font-extrabold">{result.serviceType || "Paket"}</h2>
+          <p className="mt-1 font-mono text-sm text-muted-foreground">{result.resi}</p>
+        </div>
+        <StatusBadge result={result} />
+      </div>
+
+      <div className="space-y-4 px-5 py-5 sm:px-7">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <SummaryItem
+            icon={MapPin}
+            label="Lokasi terakhir"
+            value={result.lastLocation || "Dalam Perjalanan ke Manokwari"}
+          />
+          <SummaryItem
+            icon={CalendarDays}
+            label="Tanggal update"
+            value={formatPackageDate(result.lastUpdated || result.packageDate)}
+          />
+        </div>
+
+        {result.arrivedAtDestination ? (
+          <div className="divide-y divide-border border-y border-border">
+            <Detail icon={UserRound} label="Nama" value={result.customerName || "-"} />
+            <Detail icon={PackageCheck} label="Jenis Jastip" value={result.serviceType || "-"} />
+            <Detail
+              icon={Weight}
+              label="Berat / Volume"
+              value={`${formatWeight(result.realWeight)} / ${formatWeight(result.volumeWeight)}`}
+            />
+            <Detail icon={Wallet} label="Ongkir" value={formatRupiah(result.totalShipping)} />
+            <Detail
+              icon={CircleCheck}
+              label="Pengambilan"
+              value={result.pickedUp ? "Sudah Diambil" : "Belum Diambil"}
+            />
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-accent/50 px-4 py-4 text-sm leading-relaxed text-accent-foreground">
+            Paket masih dalam proses perjalanan menuju Manokwari. Detail berat dan ongkir akan
+            ditampilkan setelah paket tiba dan diverifikasi di gudang Manokwari.
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/kontak"
+            className="ml-auto rounded-full border border-border px-4 py-2 text-xs font-bold transition-colors hover:bg-muted"
+          >
+            Hubungi Admin
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function StatusBadge({ result }: { result: PublicTrackingResult }) {
+  const className = result.pickedUp
+    ? "bg-muted text-muted-foreground"
+    : result.arrivedAtDestination
+      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+      : "bg-accent text-accent-foreground";
+  return (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-extrabold ${className}`}
+    >
+      <CircleCheck className="size-4" />
+      {result.status}
+    </span>
+  );
+}
+
+function SummaryItem({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-2.5 rounded-2xl bg-background px-4 py-3">
+      <Icon className="mt-0.5 size-4 shrink-0 text-gold-deep" />
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="mt-0.5 break-words font-bold">{value}</p>
       </div>
     </div>
   );
@@ -248,22 +399,25 @@ function formatWeight(value: string | null): string {
   return `${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 3 }).format(weight)} Kg`;
 }
 
-function Detail({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  icon?: typeof Clock;
-}) {
+function formatRupiah(value: string | null): string {
+  if (!value) return "-";
+  const amount = Number(value.replace(",", "."));
+  if (!Number.isFinite(amount)) return value;
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function Detail({ label, value, icon: Icon }: { label: string; value: string; icon: LucideIcon }) {
   return (
-    <div className="rounded-2xl border border-border bg-background px-5 py-4">
-      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-1 flex items-center gap-2 text-sm font-extrabold">
-        {Icon && <Icon className="size-4 text-gold-deep" />}
-        {value}
-      </p>
+    <div className="flex items-center justify-between gap-4 py-3.5 text-sm">
+      <span className="inline-flex items-center gap-2 text-muted-foreground">
+        <Icon className="size-4 text-gold-deep" />
+        {label}
+      </span>
+      <span className="text-right font-bold">{value}</span>
     </div>
   );
 }

@@ -60,7 +60,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [dbStatus, setDbStatus] = useState<DatabaseStatus | null>(null);
   const [activePreviewPage, setActivePreviewPage] = useState<string>("/");
-  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("mobile");
 
   const hasUnsavedChanges = JSON.stringify(data) !== JSON.stringify(draftData);
 
