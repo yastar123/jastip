@@ -249,37 +249,87 @@ export function LacakPageView({ previewData }: { previewData?: AppCMSData }) {
 }
 
 function NameSearchResults({ results }: { results: PublicTrackingResult[] }) {
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "not-picked-up" | "picked-up" | "in-transit"
+  >("all");
+  const filters = [
+    { id: "all", label: "Semua Paket" },
+    { id: "not-picked-up", label: "Belum Diambil" },
+    { id: "picked-up", label: "Sudah Diambil" },
+    { id: "in-transit", label: "Dalam Perjalanan" },
+  ] as const;
+  const filteredResults = results.filter((result) => {
+    switch (statusFilter) {
+      case "not-picked-up":
+        return result.arrivedAtDestination && !result.pickedUp;
+      case "picked-up":
+        return result.pickedUp;
+      case "in-transit":
+        return !result.arrivedAtDestination;
+      default:
+        return true;
+    }
+  });
+
   return (
     <section className="space-y-4">
       <div>
         <h2 className="text-xl font-extrabold">Hasil Pencarian</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {results.length} paket ditemukan berdasarkan nama
+          {filteredResults.length} dari {results.length} paket berdasarkan nama
         </p>
       </div>
-      {results.map((result) => (
-        <article
-          key={`${result.resi}-${result.packageNumber ?? ""}`}
-          className="rounded-3xl border border-border bg-card shadow-elegant"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border bg-secondary/50 px-5 py-5 sm:px-7">
-            <div>
-              <h3 className="text-lg font-extrabold">{result.serviceType || "Paket"}</h3>
-              <p className="mt-1 font-mono text-sm text-muted-foreground">{result.resi}</p>
+      <div
+        className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-card p-2 sm:grid-cols-4"
+        role="group"
+        aria-label="Filter status paket"
+      >
+        {filters.map((filter) => (
+          <button
+            key={filter.id}
+            type="button"
+            aria-pressed={statusFilter === filter.id}
+            onClick={() => setStatusFilter(filter.id)}
+            className={`rounded-xl px-3 py-2.5 text-xs font-bold transition-colors sm:text-sm ${
+              statusFilter === filter.id
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+      {filteredResults.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-border px-5 py-8 text-center text-sm text-muted-foreground">
+          Tidak ada paket dengan status{" "}
+          {filters.find((filter) => filter.id === statusFilter)?.label}.
+        </p>
+      ) : (
+        filteredResults.map((result) => (
+          <article
+            key={`${result.resi}-${result.packageNumber ?? ""}`}
+            className="rounded-3xl border border-border bg-card shadow-elegant"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border bg-secondary/50 px-5 py-5 sm:px-7">
+              <div>
+                <h3 className="text-lg font-extrabold">{result.serviceType || "Paket"}</h3>
+                <p className="mt-1 font-mono text-sm text-muted-foreground">{result.resi}</p>
+              </div>
+              <StatusBadge result={result} />
             </div>
-            <StatusBadge result={result} />
-          </div>
-          <div className="space-y-4 px-5 py-5 sm:px-7">
-            <PackageTrackingSummary result={result} />
-            {result.arrivedAtDestination ? (
-              <PackageDetailList result={result} />
-            ) : (
-              <TransitNotice />
-            )}
-            <ContactAdminLink />
-          </div>
-        </article>
-      ))}
+            <div className="space-y-4 px-5 py-5 sm:px-7">
+              <PackageTrackingSummary result={result} />
+              {result.arrivedAtDestination ? (
+                <PackageDetailList result={result} />
+              ) : (
+                <TransitNotice />
+              )}
+              <ContactAdminLink />
+            </div>
+          </article>
+        ))
+      )}
     </section>
   );
 }
