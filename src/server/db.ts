@@ -153,7 +153,15 @@ async function queryPublicPackages(
   const filterSql =
     filter === "name"
       ? "LOWER(BTRIM(customer_name)) = LOWER(BTRIM($1))"
-      : "UPPER(BTRIM(resi_number)) = UPPER(BTRIM($1))";
+      : `UPPER(BTRIM(resi_number)) = UPPER(BTRIM($1))
+         OR UPPER(BTRIM(COALESCE(
+           NULLIF(BTRIM(to_jsonb(packages)->>'no_resi'), ''),
+           NULLIF(BTRIM(to_jsonb(packages)->>'nomor_resi'), ''),
+           NULLIF(BTRIM(to_jsonb(packages)->>'resi_ekspedisi'), ''),
+           NULLIF(BTRIM(to_jsonb(packages)->>'tracking_number'), ''),
+           NULLIF(BTRIM(to_jsonb(packages)->>'awb'), ''),
+           NULLIF(BTRIM(to_jsonb(packages)->>'no_awb'), '')
+         ))) = UPPER(BTRIM($1))`;
   const result = await query(
     `WITH matched_packages AS (
        SELECT packages.*, to_jsonb(packages) AS package_data

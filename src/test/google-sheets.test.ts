@@ -25,6 +25,18 @@ describe("Google Sheets tracking import", () => {
     expect(parseGoogleSheetsCsv(csv)).toEqual(new Set(["JAJ-001"]));
   });
 
+  it("reads multiple table blocks that repeat the No Resi header", () => {
+    const csv = [
+      "Tanggal Masuk,No Resi,Nama Konsumen",
+      "05 November 2026,SPXID06042486972A,ZUHIROH",
+      "",
+      "Tanggal Masuk,No Resi,Nama Konsumen",
+      "06 November 2026,JY2116862296,Sandysp3",
+    ].join("\n");
+
+    expect(parseGoogleSheetsCsv(csv)).toEqual(new Set(["SPXID06042486972A", "JY2116862296"]));
+  });
+
   it("reports a useful error when the tab has no recognized resi header", () => {
     expect(() => parseGoogleSheetsCsv("Tanggal,Nama\n2026-11-08,Anya")).toThrow(
       "Google Sheets tracking tab needs a header such as Nomor Resi",

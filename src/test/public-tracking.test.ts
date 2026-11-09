@@ -84,6 +84,7 @@ describe("public package tracking", () => {
       expect.stringContaining("UPPER(BTRIM(resi_number)) = UPPER(BTRIM($1))"),
       ["JAJ-001"],
     );
+    expect(query.mock.calls[0]?.[0]).toContain("to_jsonb(packages)->>'no_resi'");
     expect(result).toMatchObject({
       resi: "JAJ-001",
       customerName: "Anya Putri",

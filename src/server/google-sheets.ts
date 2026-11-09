@@ -47,9 +47,8 @@ function encodeBase64Url(value: Uint8Array): string {
   return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-function getResiColumn(rows: string[][]): number {
-  const header = rows[0] ?? [];
-  const index = header.findIndex((value) => {
+function findResiColumn(header: string[]): number {
+  return header.findIndex((value) => {
     const normalized = normalizeHeader(value);
     return (
       normalized.includes("resi") ||
@@ -60,23 +59,28 @@ function getResiColumn(rows: string[][]): number {
       normalized === "kodebarcode"
     );
   });
-  if (index < 0) {
+}
+
+function extractResis(rows: string[][]): Set<string> {
+  const resis = new Set<string>();
+  let resiColumn = -1;
+  for (const row of rows) {
+    const headerColumn = findResiColumn(row);
+    if (headerColumn >= 0) {
+      resiColumn = headerColumn;
+      continue;
+    }
+    if (resiColumn < 0) continue;
+
+    const resi = normalizeResi(row[resiColumn] ?? "");
+    if (resi) resis.add(resi);
+  }
+  if (resiColumn < 0) {
     throw new Error(
       "Google Sheets tracking tab needs a header such as Nomor Resi, No Resi, AWB, or Barcode.",
     );
   }
-  return index;
-}
-
-function extractResis(rows: string[][]): Set<string> {
-  const resiColumn = getResiColumn(rows);
-  return new Set(
-    rows
-      .slice(1)
-      .map((row) => row[resiColumn] ?? "")
-      .map(normalizeResi)
-      .filter(Boolean),
-  );
+  return resis;
 }
 
 export function parseGoogleSheetsCsv(csv: string): Set<string> {

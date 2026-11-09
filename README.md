@@ -47,7 +47,10 @@ server-only `.env` file. Do not commit `.env`:
 - Resi lookup checks the verified tracking database first, then the Google
   Sheet tab configured by `GOOGLE_SHEETS_ID` and `GOOGLE_SHEETS_GID`. A matching
   Sheet-only resi is shown as **Dalam Perjalanan**. The tab's first row must
-  include a resi header such as `Nomor Resi`, `No Resi`, `AWB`, or `Barcode`.
+  include a resi header such as `Nomor Resi`, `No Resi`, `AWB`, or `Barcode`;
+  repeated header rows are supported. Database lookup checks both the internal
+  tracking code and carrier-resi columns such as `no_resi`, `nomor_resi`,
+  `resi_ekspedisi`, `tracking_number`, or `awb`.
 - For a private Google Sheet, create a Google Cloud service account with the
   Google Sheets API enabled, share the sheet with its email as a Viewer, and set
   `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`.
