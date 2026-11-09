@@ -1,6 +1,7 @@
 const DEFAULT_SPREADSHEET_ID = "15PoD1RdeIh-zfXKm7SG8nzctLINGPYe5";
 const DEFAULT_SHEET_GID = "2035133146";
 const SHEET_CACHE_TTL_MS = 30_000;
+const APPS_SCRIPT_REQUEST_TIMEOUT_MS = 30_000;
 const GOOGLE_SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly";
 
 let cachedResis: Set<string> | null = null;
@@ -299,7 +300,7 @@ async function lookupAppsScript(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ resi, token: config.token }),
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(APPS_SCRIPT_REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new Error(`Google Apps Script tracking request failed (${response.status}).`);
@@ -327,7 +328,7 @@ async function lookupAppsScriptName(
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ searchBy: "name", name, token: config.token }),
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(APPS_SCRIPT_REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new Error(`Google Apps Script tracking request failed (${response.status}).`);
