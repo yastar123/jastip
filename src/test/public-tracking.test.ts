@@ -203,4 +203,21 @@ describe("public package tracking", () => {
     await expect(findPublicPackagesByName("Nama Tidak Ada", noRows)).resolves.toEqual([]);
     await expect(findPublicPackageByResi("UNKNOWN", noRows, async () => false)).resolves.toBeNull();
   });
+
+  it("includes sheet-only packages in exact customer-name searches", async () => {
+    const query = vi.fn(async (_text: string, _values: string[]) => ({ rows: [] }));
+
+    const result = await findPublicPackagesByName("ROHANI SIAGIAN", query, async (name) => {
+      expect(name).toBe("ROHANI SIAGIAN");
+      return ["LXAD-5125402514"];
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      resi: "LXAD-5125402514",
+      customerName: null,
+      status: "Dalam Perjalanan",
+      arrivedAtDestination: false,
+    });
+  });
 });

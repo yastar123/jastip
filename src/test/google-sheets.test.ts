@@ -1,6 +1,10 @@
 import { createVerify, generateKeyPairSync } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isResiInGoogleSheet, parseGoogleSheetsCsv } from "@/server/google-sheets";
+import {
+  findResisByCustomerNameInGoogleSheet,
+  isResiInGoogleSheet,
+  parseGoogleSheetsCsv,
+} from "@/server/google-sheets";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -99,5 +103,28 @@ describe("Google Sheets tracking import", () => {
     );
 
     await expect(isResiInGoogleSheet("spxid-001")).resolves.toBe(true);
+  });
+
+  it("searches Apps Script rows by exact customer name and returns matching resis", async () => {
+    vi.stubEnv("GOOGLE_APPS_SCRIPT_URL", "https://script.google.com/macros/s/name-search/exec");
+    vi.stubEnv("GOOGLE_APPS_SCRIPT_TOKEN", "test-token");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+        expect(JSON.parse(String(init?.body))).toEqual({
+          searchBy: "name",
+          name: "ROHANI SIAGIAN",
+          token: "test-token",
+        });
+        return Response.json({
+          ok: true,
+          packages: [{ resi: "LXAD-5125402514" }, { resi: "" }, { invalid: true }],
+        });
+      }),
+    );
+
+    await expect(findResisByCustomerNameInGoogleSheet("ROHANI SIAGIAN")).resolves.toEqual([
+      "LXAD-5125402514",
+    ]);
   });
 });

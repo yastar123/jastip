@@ -10,6 +10,8 @@ let cachedAccessToken: string | null = null;
 let cachedAccessTokenExpiresAt = 0;
 const cachedAppsScriptLookups = new Map<string, { found: boolean; expiresAt: number }>();
 const pendingAppsScriptLookups = new Map<string, Promise<boolean>>();
+const cachedAppsScriptNameLookups = new Map<string, { resis: string[]; expiresAt: number }>();
+const pendingAppsScriptNameLookups = new Map<string, Promise<string[]>>();
 
 type ServiceAccountCredentials = {
   email: string;
@@ -317,6 +319,47 @@ async function lookupAppsScript(
   return payload.found;
 }
 
+async function lookupAppsScriptName(
+  name: string,
+  config: { url: string; token: string },
+): Promise<string[]> {
+  const response = await fetch(config.url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ searchBy: "name", name, token: config.token }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) {
+    throw new Error(`Google Apps Script tracking request failed (${response.status}).`);
+  }
+
+  const payload: unknown = await response.json();
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    !("ok" in payload) ||
+    payload.ok !== true ||
+    !("packages" in payload) ||
+    !Array.isArray(payload.packages)
+  ) {
+    throw new Error("Google Apps Script returned an invalid name-search response.");
+  }
+
+  const resis: string[] = [];
+  for (const item of payload.packages) {
+    if (
+      item &&
+      typeof item === "object" &&
+      "resi" in item &&
+      typeof item.resi === "string" &&
+      item.resi.trim()
+    ) {
+      resis.push(item.resi.trim());
+    }
+  }
+  return resis;
+}
+
 async function getSheetResis(): Promise<Set<string>> {
   if (cachedResis && cachedResisExpiresAt > Date.now()) return cachedResis;
   if (pendingResisRequest) return pendingResisRequest;
@@ -358,4 +401,32 @@ export async function isResiInGoogleSheet(resi: string): Promise<boolean> {
     return lookup;
   }
   return (await getSheetResis()).has(normalizeResi(resi));
+}
+
+export async function findResisByCustomerNameInGoogleSheet(name: string): Promise<string[]> {
+  const config = getAppsScriptConfig();
+  if (!config) return [];
+
+  const normalizedName = name.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+  if (!normalizedName) return [];
+
+  const cachedLookup = cachedAppsScriptNameLookups.get(normalizedName);
+  if (cachedLookup && cachedLookup.expiresAt > Date.now()) return cachedLookup.resis;
+
+  const pendingLookup = pendingAppsScriptNameLookups.get(normalizedName);
+  if (pendingLookup) return pendingLookup;
+
+  const lookup = lookupAppsScriptName(name.trim(), config)
+    .then((resis) => {
+      cachedAppsScriptNameLookups.set(normalizedName, {
+        resis,
+        expiresAt: Date.now() + SHEET_CACHE_TTL_MS,
+      });
+      return resis;
+    })
+    .finally(() => {
+      pendingAppsScriptNameLookups.delete(normalizedName);
+    });
+  pendingAppsScriptNameLookups.set(normalizedName, lookup);
+  return lookup;
 }

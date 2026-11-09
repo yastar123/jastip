@@ -5,7 +5,7 @@ import path from "node:path";
 import { type AppCMSData } from "../lib/cms-types";
 import { DEFAULT_CMS_DATA } from "../lib/cms-defaults";
 import { type PublicTrackingResult } from "../lib/tracking";
-import { isResiInGoogleSheet } from "./google-sheets";
+import { findResisByCustomerNameInGoogleSheet, isResiInGoogleSheet } from "./google-sheets";
 
 dotenv.config();
 
@@ -399,10 +399,33 @@ async function mapPublicPackage(
 export async function findPublicPackagesByName(
   name: string,
   queryOverride?: PublicPackageQuery,
+  sheetNameLookup: (value: string) => Promise<string[]> = findResisByCustomerNameInGoogleSheet,
 ): Promise<PublicTrackingResult[]> {
   if (!name.trim()) return [];
   const rows = await queryPublicPackages("name", name, queryOverride);
-  return Promise.all(rows.map((row) => mapPublicPackage(row, true)));
+  const databaseResults = await Promise.all(rows.map((row) => mapPublicPackage(row, true)));
+  const knownResis = new Set(databaseResults.map((result) => result.resi.trim().toUpperCase()));
+  const sheetResis = await sheetNameLookup(name);
+  const sheetResults = sheetResis
+    .filter((resi) => !knownResis.has(resi.trim().toUpperCase()))
+    .map((resi): PublicTrackingResult => ({
+      resi,
+      customerName: null,
+      packageNumber: null,
+      packageDate: null,
+      lastUpdated: null,
+      serviceType: null,
+      route: null,
+      lastLocation: "Dalam Perjalanan ke Manokwari",
+      realWeight: null,
+      volumeWeight: null,
+      billableWeight: null,
+      totalShipping: null,
+      arrivedAtDestination: false,
+      pickedUp: false,
+      status: "Dalam Perjalanan",
+    }));
+  return [...databaseResults, ...sheetResults];
 }
 
 export async function findPublicPackageByResi(
