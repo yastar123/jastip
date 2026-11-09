@@ -82,4 +82,22 @@ describe("Google Sheets tracking import", () => {
 
     await expect(isResiInGoogleSheet("jaj-001")).resolves.toBe(true);
   });
+
+  it("uses Apps Script for a private sheet lookup when configured", async () => {
+    vi.stubEnv("GOOGLE_APPS_SCRIPT_URL", "https://script.google.com/macros/s/test/exec");
+    vi.stubEnv("GOOGLE_APPS_SCRIPT_TOKEN", "test-token");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+        expect(init?.method).toBe("POST");
+        expect(JSON.parse(String(init?.body))).toEqual({
+          resi: "spxid-001",
+          token: "test-token",
+        });
+        return Response.json({ ok: true, found: true });
+      }),
+    );
+
+    await expect(isResiInGoogleSheet("spxid-001")).resolves.toBe(true);
+  });
 });

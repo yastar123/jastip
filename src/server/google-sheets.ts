@@ -8,6 +8,8 @@ let cachedResisExpiresAt = 0;
 let pendingResisRequest: Promise<Set<string>> | null = null;
 let cachedAccessToken: string | null = null;
 let cachedAccessTokenExpiresAt = 0;
+const cachedAppsScriptLookups = new Map<string, { found: boolean; expiresAt: number }>();
+const pendingAppsScriptLookups = new Map<string, Promise<boolean>>();
 
 type ServiceAccountCredentials = {
   email: string;
@@ -27,6 +29,19 @@ function getServiceAccountCredentials(): ServiceAccountCredentials | null {
     );
   }
   return { email, privateKey };
+}
+
+function getAppsScriptConfig(): { url: string; token: string } | null {
+  const url = process.env["GOOGLE_APPS_SCRIPT_URL"]?.trim();
+  const token = process.env["GOOGLE_APPS_SCRIPT_TOKEN"]?.trim();
+
+  if (!url && !token) return null;
+  if (!url || !token) {
+    throw new Error(
+      "Google Apps Script tracking requires both GOOGLE_APPS_SCRIPT_URL and GOOGLE_APPS_SCRIPT_TOKEN.",
+    );
+  }
+  return { url, token };
 }
 
 function normalizeResi(value: string): string {
@@ -274,6 +289,34 @@ async function readSheetResis(): Promise<Set<string>> {
     : readPublicSheetResis(spreadsheetId, sheetGid);
 }
 
+async function lookupAppsScript(
+  resi: string,
+  config: { url: string; token: string },
+): Promise<boolean> {
+  const response = await fetch(config.url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ resi, token: config.token }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) {
+    throw new Error(`Google Apps Script tracking request failed (${response.status}).`);
+  }
+
+  const payload: unknown = await response.json();
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    !("ok" in payload) ||
+    payload.ok !== true ||
+    !("found" in payload) ||
+    typeof payload.found !== "boolean"
+  ) {
+    throw new Error("Google Apps Script returned an invalid tracking response.");
+  }
+  return payload.found;
+}
+
 async function getSheetResis(): Promise<Set<string>> {
   if (cachedResis && cachedResisExpiresAt > Date.now()) return cachedResis;
   if (pendingResisRequest) return pendingResisRequest;
@@ -291,5 +334,28 @@ async function getSheetResis(): Promise<Set<string>> {
 }
 
 export async function isResiInGoogleSheet(resi: string): Promise<boolean> {
+  const appsScriptConfig = getAppsScriptConfig();
+  if (appsScriptConfig) {
+    const normalizedResi = normalizeResi(resi);
+    const cachedLookup = cachedAppsScriptLookups.get(normalizedResi);
+    if (cachedLookup && cachedLookup.expiresAt > Date.now()) return cachedLookup.found;
+
+    const pendingLookup = pendingAppsScriptLookups.get(normalizedResi);
+    if (pendingLookup) return pendingLookup;
+
+    const lookup = lookupAppsScript(resi.trim(), appsScriptConfig)
+      .then((found) => {
+        cachedAppsScriptLookups.set(normalizedResi, {
+          found,
+          expiresAt: Date.now() + SHEET_CACHE_TTL_MS,
+        });
+        return found;
+      })
+      .finally(() => {
+        pendingAppsScriptLookups.delete(normalizedResi);
+      });
+    pendingAppsScriptLookups.set(normalizedResi, lookup);
+    return lookup;
+  }
   return (await getSheetResis()).has(normalizeResi(resi));
 }

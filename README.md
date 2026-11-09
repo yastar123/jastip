@@ -58,6 +58,14 @@ server-only `.env` file. Do not commit `.env`:
   written as `\n`); never commit it. Without service-account credentials, the
   server reads the CSV export, which requires the sheet to allow viewing by
   anyone with its link.
+- To use Apps Script instead, copy `scripts/google-apps-script.gs` into the
+  spreadsheet's Apps Script project. In **Project Settings → Script Properties**,
+  add `TRACKING_API_TOKEN` with a long random secret. Deploy as a web app that
+  executes as you and is accessible to anyone, then set the deployment's `/exec`
+  URL as `GOOGLE_APPS_SCRIPT_URL` and the same secret as
+  `GOOGLE_APPS_SCRIPT_TOKEN` in the website server environment. Apps Script
+  takes precedence over direct Sheet access when configured and returns only a
+  matching/not-matching result. Never expose the token in browser code or Git.
 - In the tracking database, verified packages (`status_verifikasi` set to
   `SUDAH_DIVERIFIKASI` or `TIBA_DI_MANOKWARI`) show **Bisa Diambil**. A paid
   package shows **Sudah Diambil** when its payment/pickup status is `SUDAH_DIBAYAR`,
