@@ -142,6 +142,7 @@ describe("public package tracking", () => {
     expect(query.mock.calls[0]?.[0]).toContain(
       "'SUDAH_DIBAYAR', 'SUDAH_DI_BAYAR', 'LUNAS', 'PAID'",
     );
+    expect(query.mock.calls[0]?.[0]).toContain(")), ' ', '_'), '-', '_'))");
     expect(query.mock.calls[0]?.[0]).toContain(
       "IN ('SUDAH_DIVERIFIKASI', 'TIBA_DI_MANOKWARI') AS arrived_at_destination",
     );

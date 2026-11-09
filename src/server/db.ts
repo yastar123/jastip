@@ -320,7 +320,7 @@ async function queryPublicPackages(
            NULLIF(package_data->>'payment_status', ''),
            NULLIF(package_data->>'status', ''),
            ''
-         )), ' ', '_'), '-', '_')
+         )), ' ', '_'), '-', '_'))
            IN ('SUDAH_DIAMBIL', 'SUDAH_DIBAYAR', 'SUDAH_DI_BAYAR', 'LUNAS', 'PAID') AS picked_up,
          UPPER(REPLACE(BTRIM(COALESCE(
            NULLIF(package_data->>'status_verifikasi', ''),
