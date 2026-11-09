@@ -8,7 +8,9 @@ const TRACKING_SPREADSHEETS = [
     sheetGids: null,
   },
 ];
-const SCRIPT_VERSION = "tracking-v6";
+const SCRIPT_VERSION = "tracking-v7";
+const LOOKUP_CACHE_SECONDS = 30;
+const HEADER_SCAN_ROWS = 100;
 
 function doPost(event) {
   try {
@@ -22,13 +24,20 @@ function doPost(event) {
       return jsonResponse({ ok: false, error: "Unauthorized" });
     }
 
+    const cache = CacheService.getScriptCache();
+    const cacheKey = getLookupCacheKey(request);
+    if (cacheKey) {
+      const cachedResponse = cache.get(cacheKey);
+      if (cachedResponse) return jsonResponse(JSON.parse(cachedResponse));
+    }
+
     const sheets = getTrackingSheets();
     if (request.searchBy === "name") {
       const packages = new Map();
       let foundHeaders = false;
 
       for (const entry of sheets) {
-        const result = searchByName(entry.sheet.getDataRange().getDisplayValues(), request.name);
+        const result = searchByName(readTrackingRows(entry.sheet), request.name);
         if (result.foundHeaders) foundHeaders = true;
         for (const item of result.packages) {
           packages.set(normalizeResi(item.resi), item);
@@ -38,7 +47,10 @@ function doPost(event) {
       if (!foundHeaders) {
         throw new Error("No recognized resi and customer-name headers found");
       }
-      return jsonResponse({ ok: true, packages: Array.from(packages.values()) });
+      return cacheAndRespond(cache, cacheKey, {
+        ok: true,
+        packages: Array.from(packages.values()),
+      });
     }
 
     const targetResi = normalizeResi(request.resi);
@@ -47,7 +59,7 @@ function doPost(event) {
     let found = false;
     let foundResiHeader = false;
     for (const entry of sheets) {
-      const result = searchByResi(entry.sheet.getDataRange().getDisplayValues(), targetResi);
+      const result = searchByResi(readTrackingRows(entry.sheet), targetResi);
       if (result.foundHeader) foundResiHeader = true;
       if (result.found) {
         found = true;
@@ -58,11 +70,72 @@ function doPost(event) {
     if (!foundResiHeader) {
       throw new Error("No recognized resi header found in configured tabs");
     }
-    return jsonResponse({ ok: true, found });
+    return cacheAndRespond(cache, cacheKey, { ok: true, found });
   } catch (error) {
     console.error("Tracking request failed:", error);
     return jsonResponse({ ok: false, error: "Tracking lookup failed" });
   }
+}
+
+function getLookupCacheKey(request) {
+  let lookup;
+  if (request.searchBy === "name") {
+    const name = normalizeName(request.name);
+    if (!name) return null;
+    lookup = "name:" + name;
+  } else {
+    const resi = normalizeResi(request.resi);
+    if (!resi) return null;
+    lookup = "resi:" + resi;
+  }
+
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, lookup);
+  return "tracking-v7:" + Utilities.base64EncodeWebSafe(digest).slice(0, 40);
+}
+
+function cacheAndRespond(cache, cacheKey, payload) {
+  const serialized = JSON.stringify(payload);
+  if (cacheKey && serialized.length < 90000) {
+    cache.put(cacheKey, serialized, LOOKUP_CACHE_SECONDS);
+  }
+  return jsonResponse(payload);
+}
+
+function readTrackingRows(sheet) {
+  const lastRow = sheet.getLastRow();
+  const lastColumn = sheet.getLastColumn();
+  if (!lastRow || !lastColumn) return [];
+
+  const scanRows = Math.min(lastRow, HEADER_SCAN_ROWS);
+  const headerCandidates = sheet.getRange(1, 1, scanRows, lastColumn).getDisplayValues();
+  let headerRow = -1;
+  let resiColumn = -1;
+  let nameColumn = -1;
+
+  for (let index = 0; index < headerCandidates.length; index += 1) {
+    const headers = headerCandidates[index].map(normalizeHeader);
+    const candidateResiColumn = headers.findIndex(isResiHeader);
+    const candidateNameColumn = headers.findIndex(isCustomerNameHeader);
+    if (candidateResiColumn >= 0) {
+      headerRow = index + 1;
+      resiColumn = candidateResiColumn;
+      nameColumn = candidateNameColumn;
+      if (nameColumn >= 0) break;
+    }
+  }
+
+  if (headerRow < 0) return [];
+
+  const firstColumn = nameColumn >= 0 ? Math.min(resiColumn, nameColumn) : resiColumn;
+  const lastColumnNeeded = nameColumn >= 0 ? Math.max(resiColumn, nameColumn) : resiColumn;
+  return sheet
+    .getRange(
+      headerRow,
+      firstColumn + 1,
+      lastRow - headerRow + 1,
+      lastColumnNeeded - firstColumn + 1,
+    )
+    .getDisplayValues();
 }
 
 function searchByResi(rows, requestedResi) {
@@ -207,7 +280,7 @@ function jsonResponse(payload) {
 
 function diagnoseTrackingSheets() {
   const results = getTrackingSheets().map((entry) => {
-    const rows = entry.sheet.getDataRange().getDisplayValues();
+    const rows = readTrackingRows(entry.sheet);
     const nameSearch = searchByName(rows, "Tika Ayu Irnawati");
     return {
       spreadsheetId: entry.spreadsheetId,
