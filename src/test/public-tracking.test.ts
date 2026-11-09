@@ -50,11 +50,12 @@ describe("public package tracking", () => {
 
     const result = await findPublicPackagesByName("Anya Putri", query);
 
-    expect(query).toHaveBeenCalledWith(
-      expect.stringContaining("LOWER(BTRIM(customer_name)) = LOWER(BTRIM($1))"),
-      ["Anya Putri"],
-    );
+    expect(query).toHaveBeenCalledWith(expect.stringContaining("LOWER(BTRIM(COALESCE("), [
+      "Anya Putri",
+    ]);
     expect(query.mock.calls[0]?.[0]).not.toContain("ILIKE");
+    expect(query.mock.calls[0]?.[0]).toContain("to_jsonb(packages)->>'nama_konsumen'");
+    expect(query.mock.calls[0]?.[0]).toContain("package_data->>'status_verifikasi'");
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({
       resi: "JAJ-001",
@@ -80,10 +81,9 @@ describe("public package tracking", () => {
 
     const result = await findPublicPackageByResi("JAJ-001", query);
 
-    expect(query).toHaveBeenCalledWith(
-      expect.stringContaining("UPPER(BTRIM(resi_number)) = UPPER(BTRIM($1))"),
-      ["JAJ-001"],
-    );
+    expect(query).toHaveBeenCalledWith(expect.stringContaining("UPPER(BTRIM(COALESCE("), [
+      "JAJ-001",
+    ]);
     expect(query.mock.calls[0]?.[0]).toContain("to_jsonb(packages)->>'no_resi'");
     expect(result).toMatchObject({
       resi: "JAJ-001",
@@ -145,6 +145,7 @@ describe("public package tracking", () => {
     expect(query.mock.calls[0]?.[0]).toContain(
       "IN ('SUDAH_DIVERIFIKASI', 'TIBA_DI_MANOKWARI') AS arrived_at_destination",
     );
+    expect(query.mock.calls[0]?.[0]).toContain("package_data->>'no_resi'");
     expect(query.mock.calls[0]?.[0]).toContain(
       "WHEN BOOL_AND(arrived_at_destination OR picked_up) AND COUNT(total_shipping) > 0",
     );

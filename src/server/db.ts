@@ -152,8 +152,20 @@ async function queryPublicPackages(
 
   const filterSql =
     filter === "name"
-      ? "LOWER(BTRIM(customer_name)) = LOWER(BTRIM($1))"
-      : `UPPER(BTRIM(resi_number)) = UPPER(BTRIM($1))
+      ? `LOWER(BTRIM(COALESCE(
+           NULLIF(to_jsonb(packages)->>'customer_name', ''),
+           NULLIF(to_jsonb(packages)->>'nama_konsumen', ''),
+           NULLIF(to_jsonb(packages)->>'nama_pelanggan', ''),
+           NULLIF(to_jsonb(packages)->>'nama', '')
+         ))) = LOWER(BTRIM($1))`
+      : `UPPER(BTRIM(COALESCE(
+           NULLIF(to_jsonb(packages)->>'resi_number', ''),
+           NULLIF(to_jsonb(packages)->>'barcode_number', ''),
+           NULLIF(to_jsonb(packages)->>'barcode', ''),
+           NULLIF(to_jsonb(packages)->>'kode_barcode', ''),
+           NULLIF(to_jsonb(packages)->>'no_paket', ''),
+           NULLIF(to_jsonb(packages)->>'package_number', '')
+         ))) = UPPER(BTRIM($1))
          OR UPPER(BTRIM(COALESCE(
            NULLIF(BTRIM(to_jsonb(packages)->>'no_resi'), ''),
            NULLIF(BTRIM(to_jsonb(packages)->>'nomor_resi'), ''),
@@ -164,16 +176,52 @@ async function queryPublicPackages(
          ))) = UPPER(BTRIM($1))`;
   const result = await query(
     `WITH matched_packages AS (
-       SELECT packages.*, to_jsonb(packages) AS package_data
+       SELECT to_jsonb(packages) AS package_data
        FROM packages
        WHERE ${filterSql}
      ),
      public_package_rows AS (
        SELECT
-         UPPER(BTRIM(resi_number)) AS resi_key,
-         LOWER(BTRIM(customer_name)) AS customer_key,
-         BTRIM(resi_number) AS resi,
-         BTRIM(customer_name) AS customer_name,
+         UPPER(BTRIM(COALESCE(
+           NULLIF(BTRIM(package_data->>'resi_number'), ''),
+           NULLIF(BTRIM(package_data->>'barcode_number'), ''),
+           NULLIF(BTRIM(package_data->>'barcode'), ''),
+           NULLIF(BTRIM(package_data->>'kode_barcode'), ''),
+           NULLIF(BTRIM(package_data->>'no_paket'), ''),
+           NULLIF(BTRIM(package_data->>'package_number'), ''),
+           NULLIF(BTRIM(package_data->>'no_resi'), ''),
+           NULLIF(BTRIM(package_data->>'nomor_resi'), ''),
+           NULLIF(BTRIM(package_data->>'resi_ekspedisi'), ''),
+           NULLIF(BTRIM(package_data->>'tracking_number'), ''),
+           NULLIF(BTRIM(package_data->>'awb'), ''),
+           NULLIF(BTRIM(package_data->>'no_awb'), '')
+         ))) AS resi_key,
+         LOWER(BTRIM(COALESCE(
+           NULLIF(BTRIM(package_data->>'customer_name'), ''),
+           NULLIF(BTRIM(package_data->>'nama_konsumen'), ''),
+           NULLIF(BTRIM(package_data->>'nama_pelanggan'), ''),
+           NULLIF(BTRIM(package_data->>'nama'), '')
+         ))) AS customer_key,
+         BTRIM(COALESCE(
+           NULLIF(BTRIM(package_data->>'resi_number'), ''),
+           NULLIF(BTRIM(package_data->>'barcode_number'), ''),
+           NULLIF(BTRIM(package_data->>'barcode'), ''),
+           NULLIF(BTRIM(package_data->>'kode_barcode'), ''),
+           NULLIF(BTRIM(package_data->>'no_paket'), ''),
+           NULLIF(BTRIM(package_data->>'package_number'), ''),
+           NULLIF(BTRIM(package_data->>'no_resi'), ''),
+           NULLIF(BTRIM(package_data->>'nomor_resi'), ''),
+           NULLIF(BTRIM(package_data->>'resi_ekspedisi'), ''),
+           NULLIF(BTRIM(package_data->>'tracking_number'), ''),
+           NULLIF(BTRIM(package_data->>'awb'), ''),
+           NULLIF(BTRIM(package_data->>'no_awb'), '')
+         )) AS resi,
+         BTRIM(COALESCE(
+           NULLIF(BTRIM(package_data->>'customer_name'), ''),
+           NULLIF(BTRIM(package_data->>'nama_konsumen'), ''),
+           NULLIF(BTRIM(package_data->>'nama_pelanggan'), ''),
+           NULLIF(BTRIM(package_data->>'nama'), '')
+         )) AS customer_name,
          COALESCE(
            NULLIF(BTRIM(package_data->>'no_paket'), ''),
            NULLIF(BTRIM(package_data->>'package_number'), ''),
@@ -219,26 +267,26 @@ async function queryPublicPackages(
              NULLIF(BTRIM(package_data->>'kota_terakhir'), ''),
              NULLIF(BTRIM(package_data->>'current_city'), '')
            ) AS last_location,
-         NULLIF(REPLACE(COALESCE(
+         NULLIF(REPLACE(REGEXP_REPLACE(COALESCE(
            NULLIF(package_data->>'berat_real', ''),
            NULLIF(package_data->>'real_weight', ''),
            NULLIF(package_data->>'weight_real', ''),
            NULLIF(package_data->>'berat_aktual', ''),
            NULLIF(package_data->>'berat', '')
-         ), ',', '.'), '')::numeric AS real_weight,
-         NULLIF(REPLACE(COALESCE(
+         ), '[^0-9,.-]', '', 'g'), ',', '.'), '')::numeric AS real_weight,
+         NULLIF(REPLACE(REGEXP_REPLACE(COALESCE(
            NULLIF(package_data->>'berat_volume', ''),
            NULLIF(package_data->>'volume_weight', ''),
            NULLIF(package_data->>'weight_volume', ''),
            NULLIF(package_data->>'berat_volumetrik', '')
-         ), ',', '.'), '')::numeric AS volume_weight,
-         NULLIF(REPLACE(COALESCE(
+         ), '[^0-9,.-]', '', 'g'), ',', '.'), '')::numeric AS volume_weight,
+         NULLIF(REPLACE(REGEXP_REPLACE(COALESCE(
            NULLIF(package_data->>'berat_digunakan', ''),
            NULLIF(package_data->>'used_weight', ''),
            NULLIF(package_data->>'chargeable_weight', ''),
            NULLIF(package_data->>'berat_tagihan', ''),
            NULLIF(package_data->>'berat_dipakai', '')
-         ), ',', '.'), '')::numeric AS billable_weight,
+         ), '[^0-9,.-]', '', 'g'), ',', '.'), '')::numeric AS billable_weight,
          CASE
            WHEN COALESCE(
              NULLIF(BTRIM(package_data->>'total_ongkir'), ''),
@@ -270,11 +318,17 @@ async function queryPublicPackages(
            NULLIF(package_data->>'status_pembayaran', ''),
            NULLIF(package_data->>'status_bayar', ''),
            NULLIF(package_data->>'payment_status', ''),
-           status_pengambilan,
+           NULLIF(package_data->>'status', ''),
            ''
          )), ' ', '_'), '-', '_')
            IN ('SUDAH_DIAMBIL', 'SUDAH_DIBAYAR', 'SUDAH_DI_BAYAR', 'LUNAS', 'PAID') AS picked_up,
-         UPPER(REPLACE(BTRIM(COALESCE(status_verifikasi, '')), ' ', '_'))
+         UPPER(REPLACE(BTRIM(COALESCE(
+           NULLIF(package_data->>'status_verifikasi', ''),
+           NULLIF(package_data->>'verification_status', ''),
+           NULLIF(package_data->>'status_kedatangan', ''),
+           NULLIF(package_data->>'arrival_status', ''),
+           ''
+         )), ' ', '_'))
            IN ('SUDAH_DIVERIFIKASI', 'TIBA_DI_MANOKWARI') AS arrived_at_destination
        FROM matched_packages
      )
