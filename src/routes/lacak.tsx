@@ -254,7 +254,7 @@ function NameSearchResults({ results }: { results: PublicTrackingResult[] }) {
   >("all");
   const filters = [
     { id: "all", label: "Semua Paket" },
-    { id: "not-picked-up", label: "Belum Diambil" },
+    { id: "not-picked-up", label: "Bisa Diambil" },
     { id: "picked-up", label: "Sudah Diambil" },
     { id: "in-transit", label: "Dalam Perjalanan" },
   ] as const;
@@ -384,8 +384,8 @@ function PackageDetailList({ result }: { result: PublicTrackingResult }) {
       <Detail icon={Wallet} label="Ongkir" value={formatRupiah(result.totalShipping)} />
       <Detail
         icon={CircleCheck}
-        label="Pengambilan"
-        value={result.pickedUp ? "Sudah Diambil" : "Belum Diambil"}
+        label="Pembayaran"
+        value={result.pickedUp ? "Sudah Dibayar" : "Belum Dibayar"}
       />
     </div>
   );

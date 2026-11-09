@@ -1,5 +1,4 @@
 // Data demo pelacakan paket (frontend saja).
-// Nanti: data ini bisa diambil otomatis dari Google Drive milik admin.
 export type TrackingEvent = {
   time: string;
   place: string;

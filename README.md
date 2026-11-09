@@ -44,6 +44,21 @@ server-only `.env` file. Do not commit `.env`:
 - `TRACKING_DATABASE_URL` is required for public tracking and must use a
   dedicated read-only account with access to the internal packages database
   (currently `JASTIPNEW`).
+- Resi lookup checks the verified tracking database first, then the Google
+  Sheet tab configured by `GOOGLE_SHEETS_ID` and `GOOGLE_SHEETS_GID`. A matching
+  Sheet-only resi is shown as **Dalam Perjalanan**. The tab's first row must
+  include a resi header such as `Nomor Resi`, `No Resi`, `AWB`, or `Barcode`.
+- For a private Google Sheet, create a Google Cloud service account with the
+  Google Sheets API enabled, share the sheet with its email as a Viewer, and set
+  `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`.
+  Store the private key only in the server's environment (newlines may be
+  written as `\n`); never commit it. Without service-account credentials, the
+  server reads the CSV export, which requires the sheet to allow viewing by
+  anyone with its link.
+- In the tracking database, verified packages (`status_verifikasi` set to
+  `SUDAH_DIVERIFIKASI` or `TIBA_DI_MANOKWARI`) show **Bisa Diambil**. A paid
+  package shows **Sudah Diambil** when its payment/pickup status is `SUDAH_DIBAYAR`,
+  `LUNAS`, `PAID`, or `SUDAH_DIAMBIL`.
 - `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `SESSION_SECRET` are required for admin
   login. Use a unique password of at least 10 characters and a random
   `SESSION_SECRET` of at least 32 characters (for example, generate one with

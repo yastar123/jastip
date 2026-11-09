@@ -36,7 +36,7 @@ describe("public package tracking", () => {
   });
 
   it("returns full details for arrived exact-name matches but redacts packages in transit", async () => {
-    const query = vi.fn(async () => ({
+    const query = vi.fn(async (_text: string, _values: string[]) => ({
       rows: [
         makeRow(),
         makeRow({
@@ -58,7 +58,7 @@ describe("public package tracking", () => {
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({
       resi: "JAJ-001",
-      status: "Siap Diambil",
+      status: "Bisa Diambil",
       lastLocation: "Manokwari",
       totalShipping: "38500",
       realWeight: "0.5",
@@ -76,7 +76,7 @@ describe("public package tracking", () => {
   });
 
   it("returns full price, weight, name, and pickup state by resi only after arrival", async () => {
-    const query = vi.fn(async () => ({ rows: [makeRow()] }));
+    const query = vi.fn(async (_text: string, _values: string[]) => ({ rows: [makeRow()] }));
 
     const result = await findPublicPackageByResi("JAJ-001", query);
 
@@ -93,13 +93,13 @@ describe("public package tracking", () => {
       totalShipping: "38500",
       arrivedAtDestination: true,
       pickedUp: false,
-      status: "Siap Diambil",
+      status: "Bisa Diambil",
       lastLocation: "Manokwari",
     });
   });
 
   it("redacts name, price, and weight by resi while the package is in transit", async () => {
-    const query = vi.fn(async () => ({
+    const query = vi.fn(async (_text: string, _values: string[]) => ({
       rows: [
         makeRow({
           arrived_at_destination: false,
@@ -123,7 +123,7 @@ describe("public package tracking", () => {
   });
 
   it("treats a picked-up package as arrived even if verification status is stale", async () => {
-    const query = vi.fn(async () => ({
+    const query = vi.fn(async (_text: string, _values: string[]) => ({
       rows: [
         makeRow({
           all_picked_up: true,
@@ -139,6 +139,12 @@ describe("public package tracking", () => {
       "BOOL_AND(arrived_at_destination OR picked_up) AS arrived_at_destination",
     );
     expect(query.mock.calls[0]?.[0]).toContain(
+      "'SUDAH_DIBAYAR', 'SUDAH_DI_BAYAR', 'LUNAS', 'PAID'",
+    );
+    expect(query.mock.calls[0]?.[0]).toContain(
+      "IN ('SUDAH_DIVERIFIKASI', 'TIBA_DI_MANOKWARI') AS arrived_at_destination",
+    );
+    expect(query.mock.calls[0]?.[0]).toContain(
       "WHEN BOOL_AND(arrived_at_destination OR picked_up) AND COUNT(total_shipping) > 0",
     );
     expect(result).toMatchObject({
@@ -152,18 +158,46 @@ describe("public package tracking", () => {
     });
   });
 
+  it("uses the Google Sheet as the in-transit source when a resi is not in tracking", async () => {
+    const query = vi.fn(async (_text: string, _values: string[]) => ({ rows: [] }));
+    const sheetLookup = vi.fn(async () => true);
+
+    const result = await findPublicPackageByResi("JAJ-001", query, sheetLookup);
+
+    expect(sheetLookup).toHaveBeenCalledWith("JAJ-001");
+    expect(result).toMatchObject({
+      resi: "JAJ-001",
+      customerName: null,
+      totalShipping: null,
+      arrivedAtDestination: false,
+      pickedUp: false,
+      status: "Dalam Perjalanan",
+      lastLocation: "Dalam Perjalanan ke Manokwari",
+    });
+  });
+
+  it("uses verified tracking data before the Google Sheet", async () => {
+    const query = vi.fn(async (_text: string, _values: string[]) => ({ rows: [makeRow()] }));
+    const sheetLookup = vi.fn(async () => true);
+
+    const result = await findPublicPackageByResi("JAJ-001", query, sheetLookup);
+
+    expect(sheetLookup).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ status: "Bisa Diambil", arrivedAtDestination: true });
+  });
+
   it("does not return an ambiguous resi shared by different customers", async () => {
-    const query = vi.fn(async () => ({
+    const query = vi.fn(async (_text: string, _values: string[]) => ({
       rows: [makeRow(), makeRow({ customer_name: "Customer Lain" })],
     }));
 
-    await expect(findPublicPackageByResi("JAJ-001", query)).resolves.toBeNull();
+    await expect(findPublicPackageByResi("JAJ-001", query, async () => true)).resolves.toBeNull();
   });
 
   it("returns no package for an unmatched name or resi", async () => {
-    const noRows = vi.fn(async () => ({ rows: [] }));
+    const noRows = vi.fn(async (_text: string, _values: string[]) => ({ rows: [] }));
 
     await expect(findPublicPackagesByName("Nama Tidak Ada", noRows)).resolves.toEqual([]);
-    await expect(findPublicPackageByResi("UNKNOWN", noRows)).resolves.toBeNull();
+    await expect(findPublicPackageByResi("UNKNOWN", noRows, async () => false)).resolves.toBeNull();
   });
 });

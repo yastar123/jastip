@@ -98,29 +98,31 @@ export function HomePageView({ previewData }: { previewData?: AppCMSData }) {
         }}
       />
       {/* HERO */}
-      <section className="relative overflow-hidden">
+      <section className="relative isolate overflow-hidden bg-primary-deep">
         <img
           src={home.heroImage || heroImg}
           alt="Paket dan kontainer pengiriman ke Papua"
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover object-center"
         />
-        <div className="relative mx-auto flex min-h-[560px] max-w-6xl flex-col justify-center px-4 py-20 sm:min-h-[640px]">
-          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-background/70 px-4 py-2 text-xs font-bold uppercase tracking-wider text-foreground ring-1 ring-gold/50 backdrop-blur-sm">
-            <RouteIcon className="size-3.5 text-gold-deep" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-deep/95 via-primary-deep/75 to-primary-deep/15" />
+        <div className="absolute inset-0 bg-gradient-to-t from-primary-deep/55 via-transparent to-transparent" />
+        <div className="relative mx-auto flex min-h-[560px] max-w-6xl flex-col justify-center px-4 py-14 sm:min-h-[640px] sm:py-20">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-gold/40 bg-background/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary-foreground backdrop-blur-sm">
+            <RouteIcon className="size-3.5 text-gold" />
             {home.hero.badge || site.cities}
           </span>
-          <h1 className="mt-6 max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+          <h1 className="mt-6 max-w-2xl text-4xl font-extrabold leading-[1.08] tracking-tight text-primary-foreground sm:text-5xl lg:text-6xl">
             {home.hero.titlePrefix}{" "}
             <span className="text-gradient-gold">{home.hero.titleHighlight}</span>{" "}
             {home.hero.titleSuffix}
           </h1>
-          <p className="mt-5 w-fit max-w-xl rounded-2xl bg-background/85 px-5 py-4 text-base font-semibold leading-relaxed text-foreground shadow-elegant backdrop-blur-md sm:text-lg">
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-primary-foreground/90 sm:text-lg">
             {home.hero.description}
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               to="/lacak"
-              className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-sm font-bold text-background shadow-elegant transition-transform hover:scale-[1.03]"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-6 py-3.5 text-sm font-extrabold text-foreground shadow-gold transition-transform hover:scale-[1.03]"
             >
               <Search className="size-4" />
               {home.hero.trackButtonText || "Lacak Paket Saya"}
@@ -129,16 +131,28 @@ export function HomePageView({ previewData }: { previewData?: AppCMSData }) {
               href={waLink(site.waMessage, site.whatsapp)}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-background/80 px-6 py-3.5 text-sm font-bold text-foreground shadow-elegant backdrop-blur-sm transition-colors hover:text-primary-deep"
+              className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/35 bg-background/10 px-6 py-3.5 text-sm font-bold text-primary-foreground backdrop-blur-sm transition-colors hover:bg-background/20"
             >
               <PhoneCall className="size-4" />
               {home.hero.contactButtonText || "Hubungi Admin"}
             </a>
           </div>
-          <div className="mt-12 w-fit flex-wrap gap-6 rounded-2xl bg-background/85 px-5 py-4 text-sm font-semibold text-foreground shadow-elegant backdrop-blur-md sm:flex">
+          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-xs font-semibold text-primary-foreground/90 sm:mt-10 sm:gap-x-8 sm:text-sm">
+            {[
+              { icon: ShieldCheck, label: "Paket ditangani dengan aman" },
+              { icon: Boxes, label: "Pilihan layanan beragam" },
+              { icon: ScanBarcode, label: "Status mudah dilacak" },
+            ].map(({ icon: Icon, label }) => (
+              <span key={label} className="inline-flex items-center gap-2">
+                <Icon className="size-4 text-gold" />
+                {label}
+              </span>
+            ))}
+          </div>
+          <div className="mt-8 flex w-fit flex-wrap gap-x-6 gap-y-3 rounded-2xl border border-primary-foreground/15 bg-background/10 px-5 py-4 text-sm font-semibold text-primary-foreground shadow-elegant backdrop-blur-md sm:mt-10 sm:gap-8">
             {home.hero.stats.map((stat) => (
               <div key={stat.label} className="flex items-center gap-3">
-                <span className="text-3xl font-extrabold text-gold-deep">{stat.number}</span>
+                <span className="text-3xl font-extrabold text-gold">{stat.number}</span>
                 <span className="max-w-[100px] leading-tight">{stat.label}</span>
               </div>
             ))}
@@ -158,33 +172,67 @@ export function HomePageView({ previewData }: { previewData?: AppCMSData }) {
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((service, i) => {
             const Icon = SERVICE_ICONS[i % SERVICE_ICONS.length] ?? Package;
+            const fallbackPanel =
+              i % 4 === 0
+                ? "bg-gradient-red"
+                : i % 4 === 1
+                  ? "bg-gradient-gold"
+                  : i % 4 === 2
+                    ? "bg-gradient-to-br from-emerald-500 to-emerald-700"
+                    : "bg-gradient-to-br from-orange-400 to-orange-600";
             return (
               <Link
                 key={service.id}
                 to="/layanan"
                 hash={service.id}
-                className="group flex flex-col rounded-2xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-gold/60 hover:shadow-elegant"
+                className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm transition-all hover:-translate-y-1 hover:border-gold/60 hover:shadow-elegant"
               >
-                <span className="inline-flex size-12 items-center justify-center rounded-xl bg-secondary text-primary">
-                  <Icon className="size-6" />
-                </span>
-                <h3 className="mt-4 text-lg font-extrabold">{service.name}</h3>
-                <p className="mt-1 text-xs font-semibold text-muted-foreground">{service.route}</p>
-                <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
-                  {service.tagline}
-                </p>
-                <div className="mt-4 border-t border-border pt-4">
-                  <p className="text-xs text-muted-foreground">Mulai dari</p>
-                  <p className="text-lg font-extrabold text-primary">
-                    {formatRupiah(service.startingFrom)}
-                    <span className="text-xs font-semibold text-muted-foreground">
-                      {" "}
-                      /{service.unit}
-                    </span>
-                  </p>
-                  <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-gold-deep group-hover:underline">
-                    Lihat tarif <ArrowRight className="size-4" />
+                <div
+                  className={`relative h-36 overflow-hidden ${service.image ? "bg-muted" : fallbackPanel}`}
+                >
+                  {service.image ? (
+                    <img
+                      src={service.image}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <>
+                      <div className="absolute -right-8 -top-10 size-40 rounded-full bg-background/15" />
+                      <div className="absolute -bottom-16 -left-8 size-36 rounded-full bg-background/10" />
+                      <Icon className="absolute bottom-4 left-5 size-20 text-primary-foreground/90" />
+                    </>
+                  )}
+                  {service.image && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
+                  )}
+                  <span className="absolute bottom-4 right-4 inline-flex size-11 items-center justify-center rounded-2xl bg-background text-primary shadow-elegant">
+                    <Icon className="size-5" />
                   </span>
+                </div>
+                <div className="flex flex-1 flex-col p-5">
+                  <h3 className="text-lg font-extrabold">{service.name}</h3>
+                  <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                    {service.route}
+                  </p>
+                  <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+                    {service.tagline}
+                  </p>
+                  <div className="mt-5 rounded-2xl bg-secondary/70 p-4">
+                    <p className="text-xs text-muted-foreground">Mulai dari</p>
+                    <p className="mt-0.5 text-lg font-extrabold text-primary">
+                      {formatRupiah(service.startingFrom)}
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        {" "}
+                        /{service.unit}
+                      </span>
+                    </p>
+                    <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-gold-deep group-hover:underline">
+                      Lihat tarif{" "}
+                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+                    </span>
+                  </div>
                 </div>
               </Link>
             );

@@ -5,6 +5,7 @@ import path from "node:path";
 import { type AppCMSData } from "../lib/cms-types";
 import { DEFAULT_CMS_DATA } from "../lib/cms-defaults";
 import { type PublicTrackingResult } from "../lib/tracking";
+import { isResiInGoogleSheet } from "./google-sheets";
 
 dotenv.config();
 
@@ -256,7 +257,15 @@ async function queryPublicPackages(
              NULLIF(BTRIM(package_data->>'biaya_pengiriman'), '')
            ), '[^0-9,.-]', '', 'g'), ',', '.'), '')::numeric
          END AS total_shipping,
-         UPPER(BTRIM(COALESCE(status_pengambilan, ''))) = 'SUDAH_DIAMBIL' AS picked_up,
+         UPPER(REPLACE(REPLACE(BTRIM(COALESCE(
+           NULLIF(package_data->>'status_pengambilan', ''),
+           NULLIF(package_data->>'status_pembayaran', ''),
+           NULLIF(package_data->>'status_bayar', ''),
+           NULLIF(package_data->>'payment_status', ''),
+           status_pengambilan,
+           ''
+         )), ' ', '_'), '-', '_')
+           IN ('SUDAH_DIAMBIL', 'SUDAH_DIBAYAR', 'SUDAH_DI_BAYAR', 'LUNAS', 'PAID') AS picked_up,
          UPPER(REPLACE(BTRIM(COALESCE(status_verifikasi, '')), ' ', '_'))
            IN ('SUDAH_DIVERIFIKASI', 'TIBA_DI_MANOKWARI') AS arrived_at_destination
        FROM matched_packages
@@ -296,7 +305,7 @@ async function mapPublicPackage(
   const status = row.all_picked_up
     ? "Sudah Diambil"
     : arrivedAtDestination
-      ? "Siap Diambil"
+      ? "Bisa Diambil"
       : "Dalam Perjalanan";
   const route =
     row.route ??
@@ -337,11 +346,29 @@ export async function findPublicPackagesByName(
 export async function findPublicPackageByResi(
   resi: string,
   queryOverride?: PublicPackageQuery,
+  sheetLookupOverride: (value: string) => Promise<boolean> = isResiInGoogleSheet,
 ): Promise<PublicTrackingResult | null> {
   if (!resi.trim()) return null;
   const rows = await queryPublicPackages("resi", resi, queryOverride);
-  if (rows.length !== 1) return null;
-  return await mapPublicPackage(rows[0]!, true);
+  if (rows.length === 1) return await mapPublicPackage(rows[0]!, true);
+  if (rows.length > 1 || !(await sheetLookupOverride(resi))) return null;
+  return {
+    resi: resi.trim(),
+    customerName: null,
+    packageNumber: null,
+    packageDate: null,
+    lastUpdated: null,
+    serviceType: null,
+    route: null,
+    lastLocation: "Dalam Perjalanan ke Manokwari",
+    realWeight: null,
+    volumeWeight: null,
+    billableWeight: null,
+    totalShipping: null,
+    arrivedAtDestination: false,
+    pickedUp: false,
+    status: "Dalam Perjalanan",
+  };
 }
 
 export async function initDatabase() {

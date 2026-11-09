@@ -129,7 +129,7 @@ export function LayananPageView({ previewData }: { previewData?: AppCMSData }) {
       {/* Header halaman */}
       <section className="relative overflow-hidden bg-gradient-red">
         <div className="absolute -right-20 -top-24 size-72 rounded-full bg-gold/15 blur-3xl" />
-        <div className="relative mx-auto max-w-6xl px-4 py-16 sm:py-20">
+        <div className="relative mx-auto max-w-6xl px-4 py-8 sm:py-20">
           <p className="text-sm font-bold uppercase tracking-widest text-gold">{lp.headerBadge}</p>
           <h1 className="mt-2 max-w-2xl text-3xl font-extrabold tracking-tight text-primary-foreground sm:text-5xl">
             {lp.headerTitle}
@@ -137,7 +137,7 @@ export function LayananPageView({ previewData }: { previewData?: AppCMSData }) {
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-primary-foreground/85 sm:text-base">
             {lp.headerDescription}
           </p>
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2 sm:mt-6">
             {services.map((s) => (
               <a
                 key={s.id}
