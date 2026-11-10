@@ -8,7 +8,7 @@ const TRACKING_SPREADSHEETS = [
     sheetGids: null,
   },
 ];
-const SCRIPT_VERSION = "tracking-v7";
+const SCRIPT_VERSION = "tracking-v8";
 const LOOKUP_CACHE_SECONDS = 30;
 const HEADER_SCAN_ROWS = 100;
 
@@ -90,7 +90,7 @@ function getLookupCacheKey(request) {
   }
 
   const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, lookup);
-  return "tracking-v7:" + Utilities.base64EncodeWebSafe(digest).slice(0, 40);
+  return "tracking-v8:" + Utilities.base64EncodeWebSafe(digest).slice(0, 40);
 }
 
 function cacheAndRespond(cache, cacheKey, payload) {
@@ -292,6 +292,43 @@ function diagnoseTrackingSheets() {
       containsTargetResi: searchByResi(rows, "SPXID06145874236B").found,
     };
   });
+
+  Logger.log(JSON.stringify({ scriptVersion: SCRIPT_VERSION, results }));
+}
+
+function diagnoseRecentRows() {
+  const tests = [
+    { resi: "id265561577290n", name: "DIAH LAB" },
+    { resi: "cm92375374910", name: "NISA ARMAN" },
+  ];
+  const results = [];
+
+  for (const entry of getTrackingSheets()) {
+    const rows = readTrackingRows(entry.sheet);
+    let columns = { resi: -1, name: -1 };
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      columns = updateHeaderColumns(row, columns);
+      if (rowContainsResiHeader(row) || rowContainsNameHeader(row)) continue;
+      if (columns.resi < 0 || columns.name < 0) continue;
+
+      const rowResi = normalizeResi(row[columns.resi]);
+      const rowName = normalizeName(row[columns.name]);
+
+      for (const test of tests) {
+        if (rowResi === normalizeResi(test.resi)) {
+          results.push({
+            sheetName: entry.sheetName,
+            sheetGid: entry.sheetGid,
+            row: index + 1,
+            resiFound: true,
+            nameMatches: rowName === normalizeName(test.name),
+          });
+        }
+      }
+    }
+  }
 
   Logger.log(JSON.stringify({ scriptVersion: SCRIPT_VERSION, results }));
 }
