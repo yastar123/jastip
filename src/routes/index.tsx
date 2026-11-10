@@ -169,6 +169,68 @@ export function HomePageView({ previewData }: { previewData?: AppCMSData }) {
         </div>
       </section>
 
+      {gallerySlides.length > 0 && (
+        <section className="bg-secondary/40 py-16 sm:py-20">
+          <div className="mx-auto max-w-6xl px-4">
+            <Carousel opts={{ align: "start", loop: false }}>
+              <div className="mb-8 flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold uppercase tracking-widest text-gold-deep">
+                    Informasi Terbaru
+                  </p>
+                  <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+                    Jadwal Kapal & Pengiriman
+                  </h2>
+                  <div className="gold-rule mt-5 w-20" />
+                </div>
+                <div className="hidden shrink-0 gap-2 sm:flex">
+                  <CarouselPrevious
+                    aria-label="Foto sebelumnya"
+                    className="static size-10 translate-y-0"
+                  />
+                  <CarouselNext
+                    aria-label="Foto berikutnya"
+                    className="static size-10 translate-y-0"
+                  />
+                </div>
+              </div>
+              <CarouselContent className="-ml-3">
+                {gallerySlides.map((slide) => (
+                  <CarouselItem
+                    key={slide.id}
+                    className="basis-[88%] pl-3 sm:basis-1/2 lg:basis-1/3"
+                  >
+                    <article className="h-full overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+                      <img
+                        src={slide.image}
+                        alt={slide.title || "Informasi jadwal pengiriman"}
+                        loading="lazy"
+                        className="aspect-[4/3] w-full object-cover"
+                      />
+                      {(slide.title || slide.description) && (
+                        <div className="p-5">
+                          {slide.title && (
+                            <h3 className="flex items-center gap-2 font-extrabold">
+                              <CalendarDays className="size-4 shrink-0 text-gold-deep" />
+                              {slide.title}
+                            </h3>
+                          )}
+                          {slide.description && (
+                            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                              {slide.description}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </article>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+          </div>
+        </section>
+      )}
+
       {/* LAYANAN */}
       <section className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
         <div className="mx-auto max-w-2xl text-center">
@@ -248,68 +310,6 @@ export function HomePageView({ previewData }: { previewData?: AppCMSData }) {
           })}
         </div>
       </section>
-
-      {gallerySlides.length > 0 && (
-        <section className="bg-secondary/40 py-16 sm:py-20">
-          <div className="mx-auto max-w-6xl px-4">
-            <Carousel opts={{ align: "start", loop: false }}>
-              <div className="mb-8 flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-sm font-bold uppercase tracking-widest text-gold-deep">
-                    Informasi Terbaru
-                  </p>
-                  <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
-                    Jadwal Kapal & Pengiriman
-                  </h2>
-                  <div className="gold-rule mt-5 w-20" />
-                </div>
-                <div className="hidden shrink-0 gap-2 sm:flex">
-                  <CarouselPrevious
-                    aria-label="Foto sebelumnya"
-                    className="static size-10 translate-y-0"
-                  />
-                  <CarouselNext
-                    aria-label="Foto berikutnya"
-                    className="static size-10 translate-y-0"
-                  />
-                </div>
-              </div>
-              <CarouselContent className="-ml-3">
-                {gallerySlides.map((slide) => (
-                  <CarouselItem
-                    key={slide.id}
-                    className="basis-[88%] pl-3 sm:basis-1/2 lg:basis-1/3"
-                  >
-                    <article className="h-full overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-                      <img
-                        src={slide.image}
-                        alt={slide.title || "Informasi jadwal pengiriman"}
-                        loading="lazy"
-                        className="aspect-[4/3] w-full object-cover"
-                      />
-                      {(slide.title || slide.description) && (
-                        <div className="p-5">
-                          {slide.title && (
-                            <h3 className="flex items-center gap-2 font-extrabold">
-                              <CalendarDays className="size-4 shrink-0 text-gold-deep" />
-                              {slide.title}
-                            </h3>
-                          )}
-                          {slide.description && (
-                            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                              {slide.description}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </article>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-            </Carousel>
-          </div>
-        </section>
-      )}
 
       {/* CARA KERJA */}
       <section className="bg-secondary/50 py-16 sm:py-20">
