@@ -55,6 +55,8 @@ describe("public package tracking", () => {
     ]);
     expect(query.mock.calls[0]?.[0]).not.toContain("ILIKE");
     expect(query.mock.calls[0]?.[0]).toContain("to_jsonb(packages)->>'nama_konsumen'");
+    expect(query.mock.calls[0]?.[0]).toContain("package_data->>'tanggal_tiba_gudang'");
+    expect(query.mock.calls[0]?.[0]).toContain("package_data->>'tanggal_masuk'");
     expect(query.mock.calls[0]?.[0]).toContain("package_data->>'status_verifikasi'");
     expect(result).toHaveLength(2);
     expect(result[0]).toMatchObject({
@@ -69,7 +71,9 @@ describe("public package tracking", () => {
     expect(result[1]).toMatchObject({
       resi: "JAJ-002",
       status: "Dalam Perjalanan",
-      lastLocation: "Surabaya",
+      lastLocation: "Gudang Jastip / Dalam Perjalanan ke Manokwari",
+      packageDate: "2026-11-07",
+      serviceType: "Jastip Pesawat",
       totalShipping: null,
       realWeight: null,
       customerName: null,
@@ -119,7 +123,9 @@ describe("public package tracking", () => {
       billableWeight: null,
       arrivedAtDestination: false,
       status: "Dalam Perjalanan",
-      lastLocation: "Surabaya",
+      lastLocation: "Gudang Jastip / Dalam Perjalanan ke Manokwari",
+      packageDate: "2026-11-07",
+      serviceType: "Jastip Pesawat",
     });
   });
 
@@ -175,7 +181,7 @@ describe("public package tracking", () => {
       arrivedAtDestination: false,
       pickedUp: false,
       status: "Dalam Perjalanan",
-      lastLocation: "Dalam Perjalanan ke Manokwari",
+      lastLocation: "Gudang Jastip / Dalam Perjalanan ke Manokwari",
     });
   });
 

@@ -355,18 +355,32 @@ function ResiSearchResult({ result }: { result: PublicTrackingResult }) {
 }
 
 function PackageTrackingSummary({ result }: { result: PublicTrackingResult }) {
+  const isInTransit = !result.arrivedAtDestination;
   return (
     <div className="grid gap-3 text-sm sm:grid-cols-2">
       <SummaryItem
         icon={MapPin}
         label="Lokasi terakhir"
-        value={result.lastLocation || "Dalam Perjalanan ke Manokwari"}
+        value={
+          isInTransit
+            ? "Gudang Jastip / Dalam Perjalanan ke Manokwari"
+            : result.lastLocation || "Manokwari"
+        }
       />
       <SummaryItem
         icon={CalendarDays}
-        label="Tanggal update"
-        value={formatPackageDate(result.lastUpdated || result.packageDate)}
+        label={isInTransit ? "Tanggal paket tiba di gudang Jastip" : "Tanggal update"}
+        value={formatPackageDate(
+          isInTransit ? result.packageDate : result.lastUpdated || result.packageDate,
+        )}
       />
+      {isInTransit && (
+        <SummaryItem
+          icon={PackageCheck}
+          label="Jenis layanan"
+          value={result.serviceType || "Belum tersedia"}
+        />
+      )}
     </div>
   );
 }
@@ -464,7 +478,7 @@ function formatPackageDate(value: string | null): string {
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
-    month: "short",
+    month: "long",
     year: "numeric",
     timeZone: "UTC",
   }).format(date);

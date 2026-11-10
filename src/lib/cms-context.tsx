@@ -40,20 +40,15 @@ interface CMSContextType {
 
 const CMSContext = createContext<CMSContextType | null>(null);
 
-export function CMSProvider({ children }: { children: ReactNode }) {
+export function CMSProvider({
+  children,
+  initialData = DEFAULT_CMS_DATA,
+}: {
+  children: ReactNode;
+  initialData?: AppCMSData;
+}) {
   const { user } = useAuth();
-  const [data, setData] = useState<AppCMSData>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem(STORAGE_KEY);
-        if (cached) return JSON.parse(cached) as AppCMSData;
-      } catch (err) {
-        console.warn("Error reading localStorage CMS data:", err);
-      }
-    }
-    return DEFAULT_CMS_DATA;
-  });
-
+  const [data, setData] = useState<AppCMSData>(initialData);
   const [draftData, setDraftData] = useState<AppCMSData>(data);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,7 +88,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (err) {
-      console.warn("Fetch CMS failed, relying on cached data:", err);
+      console.warn("Fetch CMS failed, keeping server-rendered CMS data:", err);
     } finally {
       setIsLoading(false);
     }

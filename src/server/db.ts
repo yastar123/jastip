@@ -229,10 +229,13 @@ async function queryPublicPackages(
            NULLIF(BTRIM(package_data->>'nomor_paket'), '')
          ) AS package_number,
          COALESCE(
+           NULLIF(BTRIM(package_data->>'tanggal_tiba_gudang'), ''),
+           NULLIF(BTRIM(package_data->>'tanggal_terima_gudang'), ''),
+           NULLIF(BTRIM(package_data->>'tanggal_masuk'), ''),
+           NULLIF(BTRIM(package_data->>'received_at'), ''),
+           NULLIF(BTRIM(package_data->>'package_date'), ''),
            NULLIF(BTRIM(package_data->>'tanggal'), ''),
            NULLIF(BTRIM(package_data->>'tanggal_paket'), ''),
-           NULLIF(BTRIM(package_data->>'tanggal_masuk'), ''),
-           NULLIF(BTRIM(package_data->>'package_date'), ''),
            NULLIF(BTRIM(package_data->>'created_at'), '')
          ) AS package_date,
          COALESCE(
@@ -385,7 +388,7 @@ async function mapPublicPackage(
     route,
     lastLocation: arrivedAtDestination
       ? "Manokwari"
-      : row.last_location || "Dalam Perjalanan ke Manokwari",
+      : "Gudang Jastip / Dalam Perjalanan ke Manokwari",
     realWeight: includeDetails && arrivedAtDestination ? row.real_weight : null,
     volumeWeight: includeDetails && arrivedAtDestination ? row.volume_weight : null,
     billableWeight: includeDetails && arrivedAtDestination ? row.billable_weight : null,
@@ -416,7 +419,7 @@ export async function findPublicPackagesByName(
       lastUpdated: null,
       serviceType: null,
       route: null,
-      lastLocation: "Dalam Perjalanan ke Manokwari",
+      lastLocation: "Gudang Jastip / Dalam Perjalanan ke Manokwari",
       realWeight: null,
       volumeWeight: null,
       billableWeight: null,
@@ -445,7 +448,7 @@ export async function findPublicPackageByResi(
     lastUpdated: null,
     serviceType: null,
     route: null,
-    lastLocation: "Dalam Perjalanan ke Manokwari",
+    lastLocation: "Gudang Jastip / Dalam Perjalanan ke Manokwari",
     realWeight: null,
     volumeWeight: null,
     billableWeight: null,

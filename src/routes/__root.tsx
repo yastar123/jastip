@@ -18,6 +18,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { WhatsAppFloat } from "@/components/whatsapp-float";
 import { CMSProvider } from "@/lib/cms-context";
+import { getPublicCMSData } from "@/lib/cms-server";
 import { AuthProvider } from "@/lib/auth-context";
 
 function NotFoundComponent() {
@@ -81,6 +82,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  loader: () => getPublicCMSData(),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -135,13 +137,14 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const initialCMSData = Route.useLoaderData();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isAdmin = pathname.startsWith("/admin");
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <CMSProvider>
+        <CMSProvider initialData={initialCMSData}>
           <Toaster position="top-right" richColors />
           {!isAdmin && <SiteHeader />}
           {!isAdmin && <WhatsAppFloat />}
