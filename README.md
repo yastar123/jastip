@@ -66,11 +66,15 @@ server-only `.env` file. Do not commit `.env`:
   `GOOGLE_APPS_SCRIPT_TOKEN` in the website server environment. Apps Script
   takes precedence over direct Sheet access when configured and returns only a
   matching/not-matching result. Never expose the token in browser code or Git.
-  The provided script reads the configured AGJT and ANGGUN tabs plus all tabs
-  in its second configured spreadsheet. Share every configured spreadsheet
+  The provided script reads the configured AGJT and ANGGUN tabs, all tabs
+  in its second configured spreadsheet, and the Pesawat tab in its third
+  configured spreadsheet. Share every configured spreadsheet
   with the account running the Apps Script. It scans for headers in the first
-  100 rows, reads only the resi/name columns below the header, and caches each
-  query response for 30 seconds to reduce slow scans and transient timeouts.
+  100 rows, reads only the resi/name columns below the header, and supports name
+  columns such as `Nama`, `Nama Konsumen`, `Nama Pelanggan`, `Nama Penerima`,
+  `Penerima Paket`, and `Nama Pemesan`.
+  It caches each query response for 30 seconds to reduce slow scans and transient
+  timeouts.
 - In the tracking database, verified packages (`status_verifikasi` set to
   `SUDAH_DIVERIFIKASI` or `TIBA_DI_MANOKWARI`) show **Bisa Diambil**. A paid
   package shows **Sudah Diambil** when its payment/pickup status is `SUDAH_DIBAYAR`,

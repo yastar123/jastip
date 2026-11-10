@@ -7,8 +7,12 @@ const TRACKING_SPREADSHEETS = [
     id: "1MZSH2q_IF3_Ked6RQEUAzDGxFbwfA0JK6aGhtZXARCU",
     sheetGids: null,
   },
+  {
+    id: "1ItA4AiUPjwZqlFHUFG2l_rcgqwgKaPau",
+    sheetGids: [196862560],
+  },
 ];
-const SCRIPT_VERSION = "tracking-v8";
+const SCRIPT_VERSION = "tracking-v12";
 const LOOKUP_CACHE_SECONDS = 30;
 const HEADER_SCAN_ROWS = 100;
 
@@ -59,7 +63,7 @@ function doPost(event) {
     let found = false;
     let foundResiHeader = false;
     for (const entry of sheets) {
-      const result = searchByResi(readTrackingRows(entry.sheet), targetResi);
+      const result = searchResiInSheet(entry.sheet, targetResi);
       if (result.foundHeader) foundResiHeader = true;
       if (result.found) {
         found = true;
@@ -90,7 +94,7 @@ function getLookupCacheKey(request) {
   }
 
   const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, lookup);
-  return "tracking-v8:" + Utilities.base64EncodeWebSafe(digest).slice(0, 40);
+  return "tracking-v12:" + Utilities.base64EncodeWebSafe(digest).slice(0, 40);
 }
 
 function cacheAndRespond(cache, cacheKey, payload) {
@@ -99,6 +103,42 @@ function cacheAndRespond(cache, cacheKey, payload) {
     cache.put(cacheKey, serialized, LOOKUP_CACHE_SECONDS);
   }
   return jsonResponse(payload);
+}
+
+function searchResiInSheet(sheet, requestedResi) {
+  const lastRow = sheet.getLastRow();
+  const lastColumn = sheet.getLastColumn();
+  if (!lastRow || !lastColumn) return { found: false, foundHeader: false };
+
+  const scanRows = Math.min(lastRow, HEADER_SCAN_ROWS);
+  const headerRows = sheet.getRange(1, 1, scanRows, lastColumn).getDisplayValues();
+  let headerRow = -1;
+  let resiColumn = -1;
+
+  for (let index = 0; index < headerRows.length; index += 1) {
+    const column = headerRows[index].map(normalizeHeader).findIndex(isResiHeader);
+    if (column >= 0) {
+      headerRow = index + 1;
+      resiColumn = column + 1;
+      break;
+    }
+  }
+
+  if (headerRow < 0) return { found: false, foundHeader: false };
+  if (headerRow >= lastRow) return { found: false, foundHeader: true };
+
+  const targetResi = normalizeResi(requestedResi);
+  const values = sheet
+    .getRange(headerRow + 1, resiColumn, lastRow - headerRow, 1)
+    .getDisplayValues();
+
+  for (const row of values) {
+    if (normalizeResi(row[0]) === targetResi) {
+      return { found: true, foundHeader: true };
+    }
+  }
+
+  return { found: false, foundHeader: true };
 }
 
 function readTrackingRows(sheet) {
@@ -216,9 +256,34 @@ function isResiHeader(header) {
 
 function isCustomerNameHeader(header) {
   return (
-    ["nama", "namakonsumen", "namapelanggan", "customername", "customer"].includes(header) ||
+    [
+      "nama",
+      "namakonsumen",
+      "namapelanggan",
+      "namapenerima",
+      "namapemilik",
+      "namapemesan",
+      "namapaket",
+      "namalengkap",
+      "customername",
+      "customer",
+      "recipientname",
+      "penerima",
+      "pemilik",
+      "pemesan",
+      "recipient",
+    ].includes(header) ||
     header.startsWith("namakonsumen") ||
-    header.startsWith("namapelanggan")
+    header.startsWith("namapelanggan") ||
+    header.startsWith("namapenerima") ||
+    header.startsWith("namapemilik") ||
+    header.startsWith("namapemesan") ||
+    header.startsWith("namapaket") ||
+    header.startsWith("namalengkap") ||
+    header.startsWith("penerima") ||
+    header.startsWith("pemilik") ||
+    header.startsWith("pemesan") ||
+    header.startsWith("recipient")
   );
 }
 
@@ -289,7 +354,7 @@ function diagnoseTrackingSheets() {
       rowCount: rows.length,
       hasTrackingHeaders: nameSearch.foundHeaders,
       matchesForTika: nameSearch.packages.length,
-      containsTargetResi: searchByResi(rows, "SPXID06145874236B").found,
+      containsTargetResi: searchResiInSheet(entry.sheet, "SPXID06145874236B").found,
     };
   });
 
