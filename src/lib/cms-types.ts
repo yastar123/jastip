@@ -30,10 +30,18 @@ export interface CtaBannerContent {
   buttonText: string;
 }
 
+export interface HomeGallerySlide {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+}
+
 export interface HomeCMSContent {
   hero: HeroContent;
   heroImage?: string;
   portImage?: string;
+  gallerySlides?: HomeGallerySlide[];
   steps: StepItem[];
   features: FeatureItem[];
   cta: CtaBannerContent;

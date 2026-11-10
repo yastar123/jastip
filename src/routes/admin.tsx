@@ -1019,6 +1019,147 @@ function HomeCMSPanel({ onSave }: { onSave?: () => void }) {
         />
       </div>
 
+      <div className="space-y-4 rounded-2xl border border-border bg-card p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-extrabold text-foreground">
+              Carousel Jadwal & Informasi Pengiriman
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Tambahkan hingga 6 foto jadwal kapal, pesawat, atau informasi pengiriman. Konsumen
+              dapat menggeser foto di halaman utama.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={(home.gallerySlides?.length ?? 0) >= 6}
+            onClick={() => {
+              updateDraft((prev) => ({
+                ...prev,
+                home: {
+                  ...prev.home,
+                  gallerySlides: [
+                    ...(prev.home.gallerySlides ?? []),
+                    {
+                      id: crypto.randomUUID(),
+                      title: `Informasi ${(prev.home.gallerySlides ?? []).length + 1}`,
+                      description: "",
+                      image: "",
+                    },
+                  ],
+                },
+              }));
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary-deep disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus className="size-4" />
+            Tambah Foto ({home.gallerySlides?.length ?? 0}/6)
+          </button>
+        </div>
+
+        {(home.gallerySlides ?? []).length === 0 ? (
+          <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+            Belum ada foto. Tambahkan foto pertama untuk menampilkan carousel di halaman utama.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {(home.gallerySlides ?? []).map((slide, index) => (
+              <div
+                key={slide.id}
+                className="space-y-4 rounded-2xl border border-border bg-background p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-extrabold">Foto {index + 1}</h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateDraft((prev) => ({
+                        ...prev,
+                        home: {
+                          ...prev.home,
+                          gallerySlides: (prev.home.gallerySlides ?? []).filter(
+                            (item) => item.id !== slide.id,
+                          ),
+                        },
+                      }));
+                      toast.info("Foto carousel dihapus");
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Hapus
+                  </button>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground">
+                      Judul
+                    </label>
+                    <input
+                      value={slide.title}
+                      onChange={(event) => {
+                        const title = event.target.value;
+                        updateDraft((prev) => ({
+                          ...prev,
+                          home: {
+                            ...prev.home,
+                            gallerySlides: (prev.home.gallerySlides ?? []).map((item) =>
+                              item.id === slide.id ? { ...item, title } : item,
+                            ),
+                          },
+                        }));
+                      }}
+                      placeholder="Contoh: Jadwal Kapal November"
+                      className="mt-1 w-full rounded-xl border border-input bg-card px-4 py-2 text-sm outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground">
+                      Keterangan (opsional)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={slide.description}
+                      onChange={(event) => {
+                        const description = event.target.value;
+                        updateDraft((prev) => ({
+                          ...prev,
+                          home: {
+                            ...prev.home,
+                            gallerySlides: (prev.home.gallerySlides ?? []).map((item) =>
+                              item.id === slide.id ? { ...item, description } : item,
+                            ),
+                          },
+                        }));
+                      }}
+                      placeholder="Contoh: Perkiraan keberangkatan dan informasi penting lainnya."
+                      className="mt-1 w-full rounded-xl border border-input bg-card px-4 py-2 text-sm outline-none"
+                    />
+                  </div>
+                </div>
+                <ImageUploaderControl
+                  label={`Foto carousel ${index + 1}`}
+                  description="Unggah poster jadwal atau informasi. Gambar akan dikompres otomatis."
+                  value={slide.image}
+                  aspectRatio="4/3"
+                  onChange={(image) => {
+                    updateDraft((prev) => ({
+                      ...prev,
+                      home: {
+                        ...prev.home,
+                        gallerySlides: (prev.home.gallerySlides ?? []).map((item) =>
+                          item.id === slide.id ? { ...item, image } : item,
+                        ),
+                      },
+                    }));
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* CTA BANNER */}
       <div className="rounded-2xl border border-border bg-card p-6 space-y-3">
         <h2 className="text-base font-extrabold">Banner Bawah (CTA Lacak)</h2>

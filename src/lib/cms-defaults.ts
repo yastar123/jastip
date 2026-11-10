@@ -30,6 +30,7 @@ export const DEFAULT_CMS_DATA: AppCMSData = {
         { number: "1", label: "Tujuan: Manokwari" },
       ],
     },
+    gallerySlides: [],
     steps: [
       {
         no: "01",
